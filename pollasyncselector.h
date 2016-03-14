@@ -6,13 +6,14 @@
 #include <memory>
 #include <tuple>
 
+#include "asyncloopdefs.h"
+
 struct pollfd;
 
 class PollAsyncSelector{
 public:
-	enum class WaitStatus{ OK, NONE, ERROR };
-
-	enum class FDStatus{ NONE, READ, WRITE, ERROR };
+	using WaitStatus	= AsyncLoopDefs::WaitStatus;
+	using FDStatus		= AsyncLoopDefs::FDStatus;
 
 public:
 	PollAsyncSelector(uint32_t _maxFD);

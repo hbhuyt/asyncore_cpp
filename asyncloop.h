@@ -4,34 +4,36 @@
 #include <cstdint>
 #include <map>
 
+#include "asyncloopdefs.h"
+
 template<class SELECTOR>
 class AsyncLoop{
 public:
 	constexpr static int  WAIT_TIMEOUT	=  5;
 	constexpr static int  CONN_TIMEOUT	= 20;
 
-	constexpr static int  WAIT_TIMEOUT_K	=  WAIT_TIMEOUT * 1000;
-
 private:
-	using WaitStatus	= typename SELECTOR::WaitStatus;
-	using FDStatus		= typename SELECTOR::FDStatus;
+	constexpr static int  WAIT_TIMEOUT_MS	=  WAIT_TIMEOUT * 1000;
+
+	using WaitStatus	= AsyncLoopDefs::WaitStatus;
+	using FDStatus		= AsyncLoopDefs::FDStatus;
 
 private:
 	class Connection;
 
 public:
-	AsyncLoop(SELECTOR &&selector, int const serverFD);
+	AsyncLoop(SELECTOR &&selector, int serverFD);
 	~AsyncLoop() = default;
 
 	bool process();
 
 private:
-	enum class DisconnecReason{ NORMAL, ERROR, PROBLEM, TIMEOUT };
+	enum class DisconnecStatus{ NORMAL, ERROR, PROBLEM, TIMEOUT };
 	
 private:
 	void _handleRead(int fd);
 	bool _handleConnect(int fd);
-	void _handleDisconnect(int fd, DisconnecReason error);
+	void _handleDisconnect(int fd, const DisconnecStatus &error);
 
 private:
 	bool _insertFD(int fd);

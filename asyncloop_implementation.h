@@ -35,7 +35,7 @@ AsyncLoop<SELECTOR>::AsyncLoop(SELECTOR &&selector, int const serverFD) :
 template<class SELECTOR>
 bool AsyncLoop<SELECTOR>::process(){
 	__log("poll()-ing...", 0, _connectedClients);
-	WaitStatus const status = _selector.wait(WAIT_TIMEOUT_K);
+	const WaitStatus &status = _selector.wait(WAIT_TIMEOUT_MS);
 
 	if (status == WaitStatus::ERROR){
 		__log("poll() error", 0, _connectedClients);
@@ -58,7 +58,7 @@ bool AsyncLoop<SELECTOR>::process(){
 			break;
 
 		case FDStatus::ERROR:
-			_handleDisconnect( std::get<0>(t), DisconnecReason::ERROR );
+			_handleDisconnect( std::get<0>(t), DisconnecStatus::ERROR );
 			break;
 
 		case FDStatus::NONE:
@@ -95,13 +95,13 @@ void AsyncLoop<SELECTOR>::_handleRead(int const fd){
 			return;
 		}else{
 			// error, disconnect.
-			return _handleDisconnect(fd, DisconnecReason::ERROR);
+			return _handleDisconnect(fd, DisconnecStatus::ERROR);
 		}
 	}
 
 	if (size == 0){
 		// normal, disconnect.
-		return _handleDisconnect(fd, DisconnecReason::NORMAL);
+		return _handleDisconnect(fd, DisconnecStatus::NORMAL);
 	}
 		
 	try{
@@ -111,7 +111,7 @@ void AsyncLoop<SELECTOR>::_handleRead(int const fd){
 		printf("%5d | %5zu | [begin]%.*s[end]\n", fd, size, (int) size, buffer);
 	}catch(const std::out_of_range& oor){
 		// inconsistency, disconnect.
-		return _handleDisconnect(fd, DisconnecReason::PROBLEM);
+		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
 	}
 }
 
@@ -138,16 +138,16 @@ bool AsyncLoop<SELECTOR>::_handleConnect(int const fd){
 }
 
 template<class SELECTOR>
-void AsyncLoop<SELECTOR>::_handleDisconnect(int const fd, DisconnecReason const error){
+void AsyncLoop<SELECTOR>::_handleDisconnect(int const fd, const DisconnecStatus &error){
 	_removeFD(fd);
 	
 	::close(fd);
 
 	switch(error){
-	case DisconnecReason::NORMAL:	return __log("Normal  Disconnect",  fd, _connectedClients);
-	case DisconnecReason::ERROR:
-	case DisconnecReason::PROBLEM:	return __log("Error   Disconnect",  fd, _connectedClients);
-	case DisconnecReason::TIMEOUT:	return __log("Timeout Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::NORMAL:	return __log("Normal  Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::ERROR:
+	case DisconnecStatus::PROBLEM:	return __log("Error   Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::TIMEOUT:	return __log("Timeout Disconnect",  fd, _connectedClients);
 	};
 }
 
@@ -182,7 +182,7 @@ void AsyncLoop<SELECTOR>::_expireFD(){
 		auto &conn = p.second;
 		
 		if (conn.expired(CONN_TIMEOUT)){
-			_handleDisconnect(conn.fd, DisconnecReason::TIMEOUT);
+			_handleDisconnect(conn.fd, DisconnecStatus::TIMEOUT);
 		//	break;
 		}
 	}
