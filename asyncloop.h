@@ -55,7 +55,7 @@ private:
 private:
 	class Connection{
 	public:
-		constexpr static uint16_t MAX_SIZE = 16 * 1024;
+		constexpr static size_t MAX_SIZE = 16;// * 1024;
 
 	public:
 		Connection(int const fd) : fd(fd){}

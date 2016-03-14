@@ -75,11 +75,6 @@ bool AsyncLoop<SELECTOR>::process(){
 
 template<class SELECTOR>
 void AsyncLoop<SELECTOR>::_handleRead(int const fd){
-	constexpr size_t buffer_size = 1024;
-	static char buffer[buffer_size];
-
-	// -------------------------------------
-
 	if (fd == _serverFD){
 		_handleConnect(fd);
 		return;
@@ -87,7 +82,25 @@ void AsyncLoop<SELECTOR>::_handleRead(int const fd){
 
 	// -------------------------------------
 
-	ssize_t const size = read(fd, buffer, buffer_size);
+	auto it = _connections.find(fd);
+	
+	if (it == _connections.end())
+		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
+			
+	Connection &c = it->second;
+
+	// -------------------------------------
+
+	ssize_t const sizeRead = c.MAX_SIZE - c.buffer_size;
+
+	if (sizeRead <= 0){
+		// buffer will overfow, disconnect.
+		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
+	}
+
+	ssize_t const size = read(fd, & c.buffer[c.buffer_size], sizeRead);
+
+	// -------------------------------------
 
 	if (size < 0){
 		if ( socket__check_eagain() ){
@@ -103,16 +116,12 @@ void AsyncLoop<SELECTOR>::_handleRead(int const fd){
 		// normal, disconnect.
 		return _handleDisconnect(fd, DisconnecStatus::NORMAL);
 	}
-		
-	try{
-		Connection &conn = _connections.at(fd);
-		conn.refresh();
+	
+	c.buffer_size += (uint16_t) size;
+	
+	c.refresh();
 
-		printf("%5d | %5zu | [begin]%.*s[end]\n", fd, size, (int) size, buffer);
-	}catch(const std::out_of_range& oor){
-		// inconsistency, disconnect.
-		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
-	}
+	printf("%5d | %5u | [begin]%.*s[end]\n", fd, c.buffer_size, (int) c.buffer_size, c.buffer);
 }
 
 template<class SELECTOR>
@@ -145,8 +154,8 @@ void AsyncLoop<SELECTOR>::_handleDisconnect(int const fd, const DisconnecStatus 
 
 	switch(error){
 	case DisconnecStatus::NORMAL:	return __log("Normal  Disconnect",  fd, _connectedClients);
-	case DisconnecStatus::ERROR:
-	case DisconnecStatus::PROBLEM:	return __log("Error   Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::ERROR:	return __log("Error   Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::PROBLEM:	return __log("Problem Disconnect",  fd, _connectedClients);
 	case DisconnecStatus::TIMEOUT:	return __log("Timeout Disconnect",  fd, _connectedClients);
 	};
 }
