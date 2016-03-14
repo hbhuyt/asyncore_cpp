@@ -12,7 +12,7 @@ struct pollfd;
 
 class PollAsyncLoop{
 public:
-	constexpr static int TIMEOUT = 1000;
+	constexpr static int  TIMEOUT	= 5000;
 
 public:
 	PollAsyncLoop(uint32_t maxClients, int serverFD);
@@ -22,16 +22,30 @@ public:
 
 private:
 	static void _log(const char *s, int const fd, uint32_t const clients){
-		printf("%-20s fd: %5d, conn clients: %5u\n", s, fd, clients);
+		if (fd)
+			printf("%-20s, clients: %5u, fd: %5d\n", s, clients, fd);
+		else
+			printf("%-20s, clients: %5u\n",          s, clients);
 	}
 
 private:
-	void _clearStatusData();
+	enum class Status{ OK, DONE, ERROR, DISCONNECT };
+
+private:
+	void _initializeStatusData();
+
 	bool _insertStatusData(int fd);
-	bool _serviceFD(pollfd &p);
-	bool _disconnectFD(pollfd &p, bool err = false);
+	void _removeStatusData(pollfd &p, const Status &stat);
+
+	Status _serviceFD(pollfd &p);
+
 	bool _connectFD();
 	bool _connectFDSingle();
+
+	void _disconnectFD(int fd);
+
+	Status _readFD(int fd);
+	Status _readFDSingle(int fd);
 
 private:
 	int				_serverFD;

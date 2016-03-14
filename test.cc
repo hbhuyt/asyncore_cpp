@@ -4,7 +4,7 @@
 int main(){
 	int fd = MySocket::create(nullptr, 2000);
 
-	PollAsyncLoop loop(10000, fd);
+	PollAsyncLoop loop(4, fd);
 
 	while(loop.wait());
 }
