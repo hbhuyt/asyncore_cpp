@@ -90,7 +90,6 @@ bool PollAsyncSelector::removeFD(int const fd){
 void PollAsyncSelector::_initializeStatusData(){
 	for(uint32_t i = 0; i < _maxFD; ++i)
 		_statusData[i].fd = -1;
-
 }
 
 #include <unistd.h>	// close

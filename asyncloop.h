@@ -2,7 +2,7 @@
 #define _ASYNC_LOOP_H
 
 #include <cstdint>
-#include <memory>
+#include <map>
 
 template<class SELECTOR>
 class AsyncLoop{
@@ -13,8 +13,12 @@ private:
 	using WaitStatus	= typename SELECTOR::WaitStatus;
 	using FDStatus		= typename SELECTOR::FDStatus;
 
+private:
+	class Connection;
+
 public:
 	AsyncLoop(SELECTOR &&selector, int const serverFD);
+	~AsyncLoop() /* = default */;
 
 	bool process();
 
@@ -36,9 +40,33 @@ private:
 	static bool socket__makeNonBlocking(int fd);
 
 private:
-	SELECTOR	_selector;
-	int		_serverFD;
-	uint32_t	_connectedClients = 0;
+	class Connection{
+	public:
+		constexpr static uint16_t MAX_SIZE = 16 * 1024;
+
+	public:
+		Connection(int const fd) : fd(fd){}
+
+	public:
+		int		fd;
+		uint32_t	time = now();
+		uint16_t	buffer_size = 0;
+		char		buffer[MAX_SIZE];
+
+	public:
+		bool expired(uint32_t timeout) const{
+			return time + timeout < now();
+		}
+
+	private:
+		static uint32_t now();
+	};
+
+private:
+	SELECTOR			_selector;
+	int				_serverFD;
+	std::map<int,Connection>	_connections;
+	uint32_t			_connectedClients = 0;
 };
 
 // ===========================

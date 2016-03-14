@@ -2,12 +2,30 @@
 #include <unistd.h>	// read, close
 #include <fcntl.h>	// fcntl
 
+#include <chrono>
+
+template<class SELECTOR>
+uint32_t AsyncLoop<SELECTOR>::Connection::now(){
+	const auto now = std::chrono::system_clock::now().time_since_epoch();
+
+	const auto sec = std::chrono::duration_cast<std::chrono::seconds>(now);
+
+	return (uint32_t) sec.count();
+}
+
+// ===========================
+
 template<class SELECTOR>
 AsyncLoop<SELECTOR>::AsyncLoop(SELECTOR &&selector, int const serverFD) :
 					_selector(std::move(selector)),
 					_serverFD(serverFD){
 	_selector.insertFD(_serverFD);
 }
+
+template<class SELECTOR>
+AsyncLoop<SELECTOR>::~AsyncLoop() = default;
+
+// ===========================
 
 template<class SELECTOR>
 bool AsyncLoop<SELECTOR>::process(){
