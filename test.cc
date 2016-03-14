@@ -1,11 +1,12 @@
 #include "mysocket.h"
-#include "pollasyncloop.h"
+#include "asyncloop.h"
+#include "pollasyncselector.h"
 
 int main(){
-	int fd = MySocket::create(nullptr, 2000);
+	int fd = MySocket::create("localhost.not.used.yet", 2000);
 
-	PollAsyncLoop loop(4, fd);
+	AsyncLoop<PollAsyncSelector> loop( PollAsyncSelector{ 4 }, fd );
 
-	while(loop.wait());
+	while(loop.process());
 }
 
