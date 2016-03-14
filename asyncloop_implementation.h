@@ -13,6 +13,11 @@ uint32_t AsyncLoop<SELECTOR>::Connection::now(){
 	return (uint32_t) sec.count();
 }
 
+template<class SELECTOR>
+inline bool AsyncLoop<SELECTOR>::Connection::expired(uint32_t const timeout) const{
+	return time + timeout < now();
+}
+		
 // ===========================
 
 template<class SELECTOR>
@@ -22,15 +27,15 @@ AsyncLoop<SELECTOR>::AsyncLoop(SELECTOR &&selector, int const serverFD) :
 	_selector.insertFD(_serverFD);
 }
 
-template<class SELECTOR>
-AsyncLoop<SELECTOR>::~AsyncLoop() = default;
+//template<class SELECTOR>
+//AsyncLoop<SELECTOR>::~AsyncLoop() = default;
 
 // ===========================
 
 template<class SELECTOR>
 bool AsyncLoop<SELECTOR>::process(){
 	__log("poll()-ing...", 0, _connectedClients);
-	WaitStatus const status = _selector.wait(TIMEOUT);
+	WaitStatus const status = _selector.wait(WAIT_TIMEOUT_K);
 
 	if (status == WaitStatus::ERROR){
 		__log("poll() error", 0, _connectedClients);
@@ -38,8 +43,11 @@ bool AsyncLoop<SELECTOR>::process(){
 		return false;
 	}
 
-	if (status == WaitStatus::NONE)
+	if (status == WaitStatus::NONE){
+		// idle loop, check for expired conn
+		_expireFD();
 		return true;
+	}
 
 	for(uint32_t i = 0; i < _selector.maxFD(); ++i){
 		const auto &t = _selector.getFDStatus(i);
@@ -50,7 +58,7 @@ bool AsyncLoop<SELECTOR>::process(){
 			break;
 
 		case FDStatus::ERROR:
-			_handleDisconnect( std::get<0>(t) );
+			_handleDisconnect( std::get<0>(t), DisconnecReason::ERROR );
 			break;
 
 		case FDStatus::NONE:
@@ -59,7 +67,7 @@ bool AsyncLoop<SELECTOR>::process(){
 
 		}
 	}
-
+	
 	return true;
 }
 
@@ -87,16 +95,24 @@ void AsyncLoop<SELECTOR>::_handleRead(int const fd){
 			return;
 		}else{
 			// error, disconnect.
-			return _handleDisconnect(fd, true);
+			return _handleDisconnect(fd, DisconnecReason::ERROR);
 		}
 	}
 
 	if (size == 0){
 		// normal, disconnect.
-		return _handleDisconnect(fd);
+		return _handleDisconnect(fd, DisconnecReason::NORMAL);
 	}
+		
+	try{
+		Connection &conn = _connections.at(fd);
+		conn.refresh();
 
-	printf("%5d | %5zu | [begin]%.*s[end]\n", fd, size, (int) size, buffer);
+		printf("%5d | %5zu | [begin]%.*s[end]\n", fd, size, (int) size, buffer);
+	}catch(const std::out_of_range& oor){
+		// inconsistency, disconnect.
+		return _handleDisconnect(fd, DisconnecReason::PROBLEM);
+	}
 }
 
 template<class SELECTOR>
@@ -108,10 +124,8 @@ bool AsyncLoop<SELECTOR>::_handleConnect(int const fd){
 	if (newFD < 0)
 		return false;
 
-	if ( _selector.insertFD(newFD) ){
+	if ( _insertFD(newFD) ){
 		socket__makeNonBlocking(newFD);
-
-		++_connectedClients;
 
 		__log("Connect", newFD, _connectedClients);
 	}else{
@@ -124,20 +138,55 @@ bool AsyncLoop<SELECTOR>::_handleConnect(int const fd){
 }
 
 template<class SELECTOR>
-void AsyncLoop<SELECTOR>::_handleDisconnect(int const fd, bool const error){
-	_selector.removeFD(fd);
+void AsyncLoop<SELECTOR>::_handleDisconnect(int const fd, DisconnecReason const error){
+	_removeFD(fd);
+	
+	::close(fd);
 
-	--_connectedClients;
-
-	if (error)
-		__log("Error Disconnect",  fd, _connectedClients);
-	else
-		__log("Normal Disconnect", fd, _connectedClients);
+	switch(error){
+	case DisconnecReason::NORMAL:	return __log("Normal  Disconnect",  fd, _connectedClients);
+	case DisconnecReason::ERROR:
+	case DisconnecReason::PROBLEM:	return __log("Error   Disconnect",  fd, _connectedClients);
+	case DisconnecReason::TIMEOUT:	return __log("Timeout Disconnect",  fd, _connectedClients);
+	};
 }
 
+// ===========================
 
+template<class SELECTOR>
+bool AsyncLoop<SELECTOR>::_insertFD(int const fd){
+	bool const result = _selector.insertFD(fd);
 
+	if (result == false)
+		return false;
+	
+	_connections.emplace(fd, fd);
+	
+	++_connectedClients;
+	
+	return true;
+}
 
+template<class SELECTOR>
+void AsyncLoop<SELECTOR>::_removeFD(int const fd){
+	_selector.removeFD(fd);
+	
+	_connections.erase(fd);
+
+	--_connectedClients;
+}
+
+template<class SELECTOR>
+void AsyncLoop<SELECTOR>::_expireFD(){
+	for(auto &p : _connections){
+		auto &conn = p.second;
+		
+		if (conn.expired(CONN_TIMEOUT)){
+			_handleDisconnect(conn.fd, DisconnecReason::TIMEOUT);
+		//	break;
+		}
+	}
+}
 
 // ===========================
 

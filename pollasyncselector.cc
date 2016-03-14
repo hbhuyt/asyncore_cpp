@@ -1,6 +1,7 @@
 #include "pollasyncselector.h"
 
 #include <poll.h>	// poll
+#include <unistd.h>	// close, for _closeStatusData()
 
 PollAsyncSelector::PollAsyncSelector(uint32_t const maxFD) :
 				_maxFD(maxFD),
@@ -91,8 +92,6 @@ void PollAsyncSelector::_initializeStatusData(){
 	for(uint32_t i = 0; i < _maxFD; ++i)
 		_statusData[i].fd = -1;
 }
-
-#include <unistd.h>	// close
 
 void PollAsyncSelector::_closeStatusData(){
 	for(uint32_t i = 0; i < _maxFD; ++i)

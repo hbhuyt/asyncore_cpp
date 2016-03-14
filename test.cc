@@ -5,7 +5,7 @@
 int main(){
 	int fd = MySocket::create("localhost.not.used.yet", 2000);
 
-	AsyncLoop<PollAsyncSelector> loop( PollAsyncSelector{ 10000 }, fd );
+	AsyncLoop<PollAsyncSelector> loop( PollAsyncSelector{ 4 }, fd );
 
 	while(loop.process());
 }
