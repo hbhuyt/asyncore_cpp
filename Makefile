@@ -30,7 +30,7 @@ clean:
 	rm -f *.o *.d *.gch		\
 			$(TARGETS)
 
-test: test.o mysocket.o pollasyncselector.o
+test: test.o mysocket.o asyncpollselector.o
 	$(LINK) $@ $^			$(LIBS)
 
 

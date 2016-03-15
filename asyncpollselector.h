@@ -6,20 +6,18 @@
 #include <memory>
 #include <tuple>
 
-#include "asyncloopdefs.h"
+#include "async.h"
 
 struct pollfd;
 
-class PollAsyncSelector{
-public:
-	using WaitStatus	= AsyncLoopDefs::WaitStatus;
-	using FDStatus		= AsyncLoopDefs::FDStatus;
+namespace Async{
 
+class PollSelector{
 public:
-	PollAsyncSelector(uint32_t _maxFD);
-	PollAsyncSelector(PollAsyncSelector &&other) /* = default */;
-	PollAsyncSelector &operator =(PollAsyncSelector &&other) /* = default */;
-	~PollAsyncSelector() /* = default */;
+	PollSelector(uint32_t _maxFD);
+	PollSelector(PollSelector &&other) /* = default */;
+	PollSelector &operator =(PollSelector &&other) /* = default */;
+	~PollSelector() /* = default */;
 
 	uint32_t maxFD() const{
 		return _maxFD;
@@ -40,6 +38,8 @@ private:
 	uint32_t			_maxFD;
 	std::unique_ptr<pollfd[]>	_statusData;
 };
+
+}; // namespace
 
 #endif
 

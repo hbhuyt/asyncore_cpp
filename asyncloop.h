@@ -4,10 +4,12 @@
 #include <cstdint>
 #include <map>
 
-#include "asyncloopdefs.h"
+#include "async.h"
 
-template<class SELECTOR>
-class AsyncLoop{
+namespace Async{
+
+template<class SELECTOR, class CONNECTION = Connection<> >
+class Loop{
 public:
 	constexpr static int  WAIT_TIMEOUT	=  5;
 	constexpr static int  CONN_TIMEOUT	= 20;
@@ -15,21 +17,15 @@ public:
 private:
 	constexpr static int  WAIT_TIMEOUT_MS	=  WAIT_TIMEOUT * 1000;
 
-	using WaitStatus	= AsyncLoopDefs::WaitStatus;
-	using FDStatus		= AsyncLoopDefs::FDStatus;
-
-private:
-	class Connection;
-
 public:
-	AsyncLoop(SELECTOR &&selector, int serverFD);
-	~AsyncLoop() = default;
+	Loop(SELECTOR &&selector, int serverFD);
+	~Loop() = default;
 
 	bool process();
 
 private:
 	enum class DisconnecStatus{ NORMAL, ERROR, PROBLEM, TIMEOUT };
-	
+
 private:
 	void _handleRead(int fd);
 	bool _handleConnect(int fd);
@@ -53,36 +49,15 @@ private:
 	static bool socket__makeNonBlocking(int fd);
 
 private:
-	class Connection{
-	public:
-		constexpr static size_t MAX_SIZE = 16;// * 1024;
-
-	public:
-		Connection(int const fd) : fd(fd){}
-
-	public:
-		int		fd;
-		uint32_t	time = now();
-		uint16_t	buffer_size = 0;
-		char		buffer[MAX_SIZE];
-
-	public:
-		bool expired(uint32_t timeout) const;
-
-		void refresh() {
-			time = now();
-		}
-
-	private:
-		static uint32_t now();
-	};
-
-private:
 	SELECTOR			_selector;
 	int				_serverFD;
-	std::map<int,Connection>	_connections;
+	std::map<int,CONNECTION>	_connections;
 	uint32_t			_connectedClients = 0;
 };
+
+
+}; // namespace
+
 
 // ===========================
 

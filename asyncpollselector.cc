@@ -1,26 +1,28 @@
-#include "pollasyncselector.h"
+#include "asyncpollselector.h"
 
 #include <poll.h>	// poll
 #include <unistd.h>	// close, for _closeStatusData()
 
-PollAsyncSelector::PollAsyncSelector(uint32_t const maxFD) :
+namespace Async{
+
+PollSelector::PollSelector(uint32_t const maxFD) :
 				_maxFD(maxFD),
 				_statusData(new pollfd[_maxFD]){
 	_initializeStatusData();
 }
 
-PollAsyncSelector::PollAsyncSelector(PollAsyncSelector &&other) = default;
+PollSelector::PollSelector(PollSelector &&other) = default;
 
-PollAsyncSelector &PollAsyncSelector::operator =(PollAsyncSelector &&other) = default;
+PollSelector &PollSelector::operator =(PollSelector &&other) = default;
 
-PollAsyncSelector::~PollAsyncSelector(){
+PollSelector::~PollSelector(){
 	if (_statusData)
 		_closeStatusData();
 }
 
 // ===========================
 
-auto PollAsyncSelector::wait(int const timeout) -> WaitStatus{
+auto PollSelector::wait(int const timeout) -> WaitStatus{
 	int const activity = poll(_statusData.get(), _maxFD, timeout);
 
 	if (activity < 0)
@@ -32,7 +34,7 @@ auto PollAsyncSelector::wait(int const timeout) -> WaitStatus{
 	return WaitStatus::OK;
 }
 
-auto PollAsyncSelector::getFDStatus(uint32_t const no) const -> std::tuple<int, FDStatus>{
+auto PollSelector::getFDStatus(uint32_t const no) const -> std::tuple<int, FDStatus>{
 	const auto &p = _statusData[no];
 	int  const fd = p.fd;
 	auto const ev = p.revents;
@@ -49,7 +51,7 @@ auto PollAsyncSelector::getFDStatus(uint32_t const no) const -> std::tuple<int, 
 	return std::make_tuple(fd, FDStatus::NONE);
 }
 
-bool PollAsyncSelector::insertFD(int const fd){
+bool PollSelector::insertFD(int const fd){
 	uint32_t pos = 0;
 	bool     pok = false;
 
@@ -75,7 +77,7 @@ bool PollAsyncSelector::insertFD(int const fd){
 	return true;
 }
 
-bool PollAsyncSelector::removeFD(int const fd){
+bool PollSelector::removeFD(int const fd){
 	// bit ugly.
 	for(uint32_t i = 0; i < _maxFD; ++i)
 		if (_statusData[i].fd == fd){
@@ -88,14 +90,16 @@ bool PollAsyncSelector::removeFD(int const fd){
 
 // ===========================
 
-void PollAsyncSelector::_initializeStatusData(){
+void PollSelector::_initializeStatusData(){
 	for(uint32_t i = 0; i < _maxFD; ++i)
 		_statusData[i].fd = -1;
 }
 
-void PollAsyncSelector::_closeStatusData(){
+void PollSelector::_closeStatusData(){
 	for(uint32_t i = 0; i < _maxFD; ++i)
 		if (_statusData[i].fd >= 0)
 			::close(_statusData[i].fd);
 }
+
+}; // namespace
 
