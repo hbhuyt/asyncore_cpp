@@ -19,9 +19,16 @@ LIBS	= -lstdc++
 #-fpack-struct
 
 SRC	= $(wildcard *.cc)
+UNAME	= $(shell uname -s)
 
 
-TARGETS	=	test_poll test_epoll
+TARGETS	=	test
+
+
+ifeq ($(UNAME), Linux)
+	# add epoll support...
+	TARGETS	+= test_epoll
+endif
 
 
 all: $(TARGETS)
@@ -32,7 +39,7 @@ clean:
 			$(TARGETS)
 
 
-test_poll: test_poll.o time.o sockets.o pollselector.o
+test: test.o time.o sockets.o pollselector.o
 	$(LINK) $@ $^			$(LIBS)
 
 

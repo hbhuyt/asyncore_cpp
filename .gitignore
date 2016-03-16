@@ -9,6 +9,6 @@ _ot/*
 
 callgrind.out.*
 
-test_poll
+test
 test_epoll
 
