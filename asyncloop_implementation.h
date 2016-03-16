@@ -1,25 +1,31 @@
-#include <sys/socket.h>	// accept
-#include <unistd.h>	// read, close
-#include <fcntl.h>	// fcntl
+#include "sockets.h"
 
-namespace Async{
+#include <unistd.h>	// read
+
+namespace net{
 
 template<class SELECTOR, class CONNECTION>
-Loop<SELECTOR, CONNECTION>::Loop(SELECTOR &&selector, int const serverFD) :
+AsyncLoop<SELECTOR, CONNECTION>::AsyncLoop(SELECTOR &&selector, int const serverFD) :
 					_selector(std::move(selector)),
 					_serverFD(serverFD){
 	_selector.insertFD(_serverFD);
 }
 
+template<class SELECTOR, class CONNECTION>
+AsyncLoop<SELECTOR, CONNECTION>::~AsyncLoop(){
+	// _serverFD will be closed if we close epoll
+	_selector.removeFD(_serverFD);
+}
+
 // ===========================
 
 template<class SELECTOR, class CONNECTION>
-bool Loop<SELECTOR, CONNECTION>::process(){
-	__log("poll()-ing...", 0, _connectedClients);
+bool AsyncLoop<SELECTOR, CONNECTION>::process(){
+	__log("poll()-ing...");
 	const WaitStatus &status = _selector.wait(WAIT_TIMEOUT_MS);
 
 	if (status == WaitStatus::ERROR){
-		__log("poll() error", 0, _connectedClients);
+		__log("poll() error");
 
 		return false;
 	}
@@ -42,6 +48,9 @@ bool Loop<SELECTOR, CONNECTION>::process(){
 			_handleDisconnect( std::get<0>(t), DisconnecStatus::ERROR );
 			break;
 
+		case FDStatus::STOP:
+			goto break2;
+
 		case FDStatus::NONE:
 		default:
 			break;
@@ -49,13 +58,15 @@ bool Loop<SELECTOR, CONNECTION>::process(){
 		}
 	}
 
+	break2: // label for goto... ;)
+
 	return true;
 }
 
 // ===========================
 
 template<class SELECTOR, class CONNECTION>
-void Loop<SELECTOR, CONNECTION>::_handleRead(int const fd){
+void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 	if (fd == _serverFD){
 		_handleConnect(fd);
 		return;
@@ -84,7 +95,7 @@ void Loop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 	// -------------------------------------
 
 	if (size < 0){
-		if ( socket__check_eagain() ){
+		if ( socket_check_eagain() ){
 			// try again
 			return;
 		}else{
@@ -100,51 +111,55 @@ void Loop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 
 	c.buffer_size = (uint16_t) (c.buffer_size + size);
 
-	refresh(c);
+	c.refresh();
 
 	printf("%5d | %5u | [begin]%.*s[end]\n", fd, c.buffer_size, (int) c.buffer_size, c.buffer);
 }
 
 template<class SELECTOR, class CONNECTION>
-bool Loop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
+bool AsyncLoop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
 	// fd is same as _serverFD
-	int const newFD = accept(fd, nullptr, nullptr);
+	int const newFD = socket_accept(fd);
 
 	// _serverFD is non blocking, so we do not need to check EAGAIN
 	if (newFD < 0)
 		return false;
 
 	if ( _insertFD(newFD) ){
-		socket__makeNonBlocking(newFD);
+		socket_makeNonBlocking(newFD);
 
-		__log("Connect", newFD, _connectedClients);
+		__log("Connect", newFD);
 	}else{
-		::close(newFD);
+		socket_close(newFD);
 
-		__log("Drop connect", newFD, _connectedClients);
+		__log("Drop connect", newFD);
 	}
 
 	return true;
 }
 
 template<class SELECTOR, class CONNECTION>
-void Loop<SELECTOR, CONNECTION>::_handleDisconnect(int const fd, const DisconnecStatus &error){
+void AsyncLoop<SELECTOR, CONNECTION>::_handleDisconnect(int const fd, const DisconnecStatus &error){
 	_removeFD(fd);
 
-	::close(fd);
+	socket_close(fd);
 
 	switch(error){
-	case DisconnecStatus::NORMAL:	return __log("Normal  Disconnect",  fd, _connectedClients);
-	case DisconnecStatus::ERROR:	return __log("Error   Disconnect",  fd, _connectedClients);
-	case DisconnecStatus::PROBLEM:	return __log("Problem Disconnect",  fd, _connectedClients);
-	case DisconnecStatus::TIMEOUT:	return __log("Timeout Disconnect",  fd, _connectedClients);
+	case DisconnecStatus::NORMAL	: return __log("Normal  Disconnect",  fd);
+	case DisconnecStatus::ERROR	: return __log("Error   Disconnect",  fd);
+	case DisconnecStatus::PROBLEM	: return __log("Problem Disconnect",  fd);
+	case DisconnecStatus::TIMEOUT	: return __log("Timeout Disconnect",  fd);
 	};
 }
 
 // ===========================
 
 template<class SELECTOR, class CONNECTION>
-bool Loop<SELECTOR, CONNECTION>::_insertFD(int const fd){
+bool AsyncLoop<SELECTOR, CONNECTION>::_insertFD(int const fd){
+	// one for server fd
+	if (_connectedClients + 1 >= _selector.maxFD() )
+		return false;
+
 	bool const result = _selector.insertFD(fd);
 
 	if (result == false)
@@ -158,7 +173,7 @@ bool Loop<SELECTOR, CONNECTION>::_insertFD(int const fd){
 }
 
 template<class SELECTOR, class CONNECTION>
-void Loop<SELECTOR, CONNECTION>::_removeFD(int const fd){
+void AsyncLoop<SELECTOR, CONNECTION>::_removeFD(int const fd){
 	_selector.removeFD(fd);
 
 	_connections.erase(fd);
@@ -167,28 +182,17 @@ void Loop<SELECTOR, CONNECTION>::_removeFD(int const fd){
 }
 
 template<class SELECTOR, class CONNECTION>
-void Loop<SELECTOR, CONNECTION>::_expireFD(){
-	for(auto &p : _connections){
+void AsyncLoop<SELECTOR, CONNECTION>::_expireFD(){
+	for(const auto &p : _connections){
 		auto &c = p.second;
 
-		if (expired(c, CONN_TIMEOUT)){
+		if (c.expired(CONN_TIMEOUT)){
 			_handleDisconnect(c.fd, DisconnecStatus::TIMEOUT);
-		//	break;
+			// iterator is invalid now...
+			return;
 		}
 	}
 }
 
-// ===========================
-
-template<class SELECTOR, class CONNECTION>
-inline bool Loop<SELECTOR, CONNECTION>::socket__check_eagain(){
-	return errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK;
-}
-
-template<class SELECTOR, class CONNECTION>
-inline bool Loop<SELECTOR, CONNECTION>::socket__makeNonBlocking(int const fd){
-	return fcntl(fd, F_SETFL, O_NONBLOCK) >= 0 ;
-}
-
-}; // namespace
+} // namespace
 

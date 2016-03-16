@@ -1,16 +1,16 @@
-#ifndef _POLL_ASYNC_LOOP_H
-#define _POLL_ASYNC_LOOP_H
+#ifndef _NET_POLL_SELECTOR_H
+#define _NET_POLL_SELECTOR_H
+
+#include "statuses.h"
 
 #include <cstdint>
 
 #include <memory>
 #include <tuple>
 
-#include "async.h"
-
 struct pollfd;
 
-namespace Async{
+namespace net{
 
 class PollSelector{
 public:
@@ -39,7 +39,7 @@ private:
 	std::unique_ptr<pollfd[]>	_statusData;
 };
 
-}; // namespace
+} // namespace
 
 #endif
 

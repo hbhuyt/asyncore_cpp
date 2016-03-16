@@ -1,9 +1,11 @@
-#include "asyncpollselector.h"
+#include "pollselector.h"
 
 #include <poll.h>	// poll
 #include <unistd.h>	// close, for _closeStatusData()
 
-namespace Async{
+namespace net{
+
+
 
 PollSelector::PollSelector(uint32_t const maxFD) :
 				_maxFD(maxFD),
@@ -22,7 +24,7 @@ PollSelector::~PollSelector(){
 
 // ===========================
 
-auto PollSelector::wait(int const timeout) -> WaitStatus{
+WaitStatus PollSelector::wait(int const timeout){
 	int const activity = poll(_statusData.get(), _maxFD, timeout);
 
 	if (activity < 0)
@@ -34,7 +36,7 @@ auto PollSelector::wait(int const timeout) -> WaitStatus{
 	return WaitStatus::OK;
 }
 
-auto PollSelector::getFDStatus(uint32_t const no) const -> std::tuple<int, FDStatus>{
+std::tuple<int, FDStatus> PollSelector::getFDStatus(uint32_t const no) const{
 	const auto &p = _statusData[no];
 	int  const fd = p.fd;
 	auto const ev = p.revents;
@@ -101,5 +103,7 @@ void PollSelector::_closeStatusData(){
 			::close(_statusData[i].fd);
 }
 
-}; // namespace
+
+
+} // namespace
 

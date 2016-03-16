@@ -1,15 +1,15 @@
-#ifndef _ASYNC_LOOP_H
-#define _ASYNC_LOOP_H
+#ifndef _NET_ASYNC_LOOP_H
+#define _NET_ASYNC_LOOP_H
 
-#include <cstdint>
+#include "statuses.h"
+#include "connection.h"
+
 #include <map>
 
-#include "async.h"
-
-namespace Async{
+namespace net{
 
 template<class SELECTOR, class CONNECTION = Connection<> >
-class Loop{
+class AsyncLoop{
 public:
 	constexpr static int  WAIT_TIMEOUT	=  5;
 	constexpr static int  CONN_TIMEOUT	= 20;
@@ -18,8 +18,10 @@ private:
 	constexpr static int  WAIT_TIMEOUT_MS	=  WAIT_TIMEOUT * 1000;
 
 public:
-	Loop(SELECTOR &&selector, int serverFD);
-	~Loop() = default;
+	AsyncLoop(SELECTOR &&selector, int serverFD);
+	~AsyncLoop();
+	AsyncLoop(AsyncLoop &&other) = default;
+	AsyncLoop &operator=(AsyncLoop &&other) = default;
 
 	bool process();
 
@@ -37,16 +39,12 @@ private:
 	void _expireFD();
 
 private:
-	static void __log(const char *s, int const fd, uint32_t const clients){
-		if (fd)
-			printf("%-20s | clients: %5u | fd: %5d\n", s, clients, fd);
+	void __log(const char *s, int const fd = -1) const{
+		if (fd < 0)
+			printf("%-20s | clients: %5u |\n",         s, _connectedClients);
 		else
-			printf("%-20s | clients: %5u |\n",          s, clients);
+			printf("%-20s | clients: %5u | fd: %5d\n", s, _connectedClients, fd);
 	}
-
-private:
-	static bool socket__check_eagain();
-	static bool socket__makeNonBlocking(int fd);
 
 private:
 	SELECTOR			_selector;
@@ -56,8 +54,7 @@ private:
 };
 
 
-}; // namespace
-
+} // namespace
 
 // ===========================
 

@@ -1,11 +1,14 @@
-#include "mysocket.h"
+#include "sockets.h"
 #include "asyncloop.h"
-#include "asyncpollselector.h"
+#include "epollselector.h"
 
 int main(){
-	int fd = MySocket::create("localhost.not.used.yet", 2000);
+	using net::AsyncLoop;
+	using MySelector = net::EPollSelector;
 
-	Async::Loop<Async::PollSelector> loop( Async::PollSelector{ 4 }, fd );
+	int const fd = net::socket_create("localhost.not.used.yet", 2000);
+
+	AsyncLoop<MySelector> loop( MySelector{ 4 }, fd );
 
 	while(loop.process());
 }
