@@ -21,7 +21,7 @@ LIBS	= -lstdc++
 SRC	= $(wildcard *.cc)
 
 
-TARGETS	=	test
+TARGETS	=	test_poll test_epoll
 
 
 all: $(TARGETS)
@@ -31,7 +31,12 @@ clean:
 	rm -f *.o *.d *.gch		\
 			$(TARGETS)
 
-test: test.o time.o sockets.o epollselector.o
+
+test_poll: test_poll.o time.o sockets.o pollselector.o
+	$(LINK) $@ $^			$(LIBS)
+
+
+test_epoll: test_epoll.o time.o sockets.o epollselector.o
 	$(LINK) $@ $^			$(LIBS)
 
 
