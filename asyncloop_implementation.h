@@ -68,7 +68,7 @@ bool AsyncLoop<SELECTOR, CONNECTION>::process(){
 template<class SELECTOR, class CONNECTION>
 void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 	if (fd == _serverFD){
-		_handleConnect(fd);
+		while (_handleConnect(fd));
 		return;
 	}
 
@@ -126,7 +126,7 @@ bool AsyncLoop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
 		return false;
 
 	if ( _insertFD(newFD) ){
-		socket_makeNonBlocking(newFD);
+		//socket_makeNonBlocking(newFD);
 
 		__log("Connect", newFD);
 	}else{

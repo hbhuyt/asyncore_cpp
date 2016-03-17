@@ -2,9 +2,10 @@
 
 #include <sys/socket.h>		// EAGAIN
 #include <arpa/inet.h>		// AF_INET
+#include <netinet/tcp.h>	// TCP_NODELAY
+#include <fcntl.h>		// fcntl
 
 #include <unistd.h>		// close
-#include <fcntl.h>		// fcntl
 
 #include <errno.h>		// errno
 
@@ -23,6 +24,11 @@ bool socket_makeNonBlocking(int const fd) noexcept{
 	return false;
 }
 
+bool socket_makeTCPNoDelay(int const fd) noexcept{
+	int const opt = 1;
+	return (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, & opt, sizeof opt) >= 0);
+}
+
 void socket_close(int const fd) noexcept{
 	if (fd >= 0)
 		::close(fd);
@@ -35,7 +41,7 @@ int socket_accept(int const fd) noexcept{
 	return -1;
 }
 
-int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, bool const nonblock) noexcept{
+int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, int const options) noexcept{
 	int fd = socket(AF_INET , SOCK_STREAM , 0);
 
 	if(fd < 0)
@@ -47,9 +53,16 @@ int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, b
 		return -2;
 	}
 
+	if (options & SOCKET_NONBLOCK)
 	if (! socket_makeNonBlocking(fd) ){
 		::close(fd);
 		return -3;
+	}
+
+	if (options & SOCKET_TCPNODELAY)
+	if (! socket_makeTCPNoDelay(fd) ){
+		::close(fd);
+		return -4;
 	}
 
 	struct sockaddr_in address;
@@ -60,12 +73,12 @@ int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, b
 
 	if (bind(fd, (struct sockaddr *) & address, sizeof address) < 0){
 		::close(fd);
-		return -4;
+		return -5;
 	}
 
 	if (listen(fd, backlog ? backlog : SOMAXCONN) < 0){
 		::close(fd);
-		return -5;
+		return -6;
 	}
 
 	return fd;
