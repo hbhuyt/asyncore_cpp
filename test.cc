@@ -5,7 +5,7 @@
 
 #include "pollselector.h"
 
-using MySelector = net::PollSelector;
+using MySelector = net::selector::PollSelector;
 
 #endif
 

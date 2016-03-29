@@ -2,7 +2,7 @@
 
 #include "epollselector.h"
 
-using MySelector = net::EPollSelector;
+using MySelector = net::selector::EPollSelector;
 
 #include "test.cc"
 

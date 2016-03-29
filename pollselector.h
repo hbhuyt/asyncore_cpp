@@ -5,23 +5,23 @@
 
 #include <cstdint>
 
-#include <memory>
 #include <tuple>
+#include <vector>
 
 struct pollfd;
 
 namespace net{
+namespace selector{
+
 
 class PollSelector{
 public:
-	PollSelector(uint32_t _maxFD);
+	PollSelector(uint32_t maxFD_);
 	PollSelector(PollSelector &&other) /* = default */;
 	PollSelector &operator =(PollSelector &&other) /* = default */;
 	~PollSelector() /* = default */;
 
-	uint32_t maxFD() const{
-		return _maxFD;
-	}
+	uint32_t maxFD() const;
 
 	bool insertFD(int fd);
 	bool removeFD(int fd);
@@ -35,10 +35,11 @@ private:
 	void _closeStatusData();
 
 private:
-	uint32_t			_maxFD;
-	std::unique_ptr<pollfd[]>	_statusData;
+	std::vector<pollfd>	statusData_;
 };
 
+
+} // namespace selector
 } // namespace
 
 #endif

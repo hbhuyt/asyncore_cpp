@@ -5,25 +5,25 @@
 
 #include <cstdint>
 
-#include <memory>
+#include <vector>
 #include <tuple>
 
 struct epoll_event;
 
 namespace net{
+namespace selector{
+
 
 class EPollSelector{
 public:
-	EPollSelector(uint32_t _maxFD);
+	EPollSelector(uint32_t maxFD_);
 	EPollSelector(EPollSelector &&other) /* = default */;
 	EPollSelector &operator =(EPollSelector &&other) /* = default */;
 	~EPollSelector() /* = default */;
 
 	void swap(EPollSelector &other);
 
-	uint32_t maxFD() const{
-		return _maxFD;
-	}
+	uint32_t maxFD() const;
 
 	bool insertFD(int fd);
 	bool removeFD(int fd);
@@ -37,14 +37,13 @@ private:
 	void _closeEPoll();
 
 private:
-	int				_epollFD;
-	uint32_t			_maxFD;
-	std::unique_ptr<epoll_event[]>	_statusData;
-	int				_statusCount	= 0;
+	int				epollFD_;
+	std::vector<epoll_event>	statusData_;
+	int				statusCount_	= 0;
 };
 
 
-
+} // namespace selector
 } // namespace
 
 #endif

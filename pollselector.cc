@@ -4,12 +4,11 @@
 #include <unistd.h>	// close, for _closeStatusData()
 
 namespace net{
-
+namespace selector{
 
 
 PollSelector::PollSelector(uint32_t const maxFD) :
-				_maxFD(maxFD),
-				_statusData(new pollfd[_maxFD]){
+				statusData_(maxFD){
 	_initializeStatusData();
 }
 
@@ -18,14 +17,17 @@ PollSelector::PollSelector(PollSelector &&other) = default;
 PollSelector &PollSelector::operator =(PollSelector &&other) = default;
 
 PollSelector::~PollSelector(){
-	if (_statusData)
-		_closeStatusData();
+	_closeStatusData();
 }
 
 // ===========================
 
+uint32_t PollSelector::maxFD() const{
+	return (uint32_t) statusData_.size();
+}
+
 WaitStatus PollSelector::wait(int const timeout){
-	int const activity = poll(_statusData.get(), _maxFD, timeout);
+	int const activity = poll(statusData_.data(), statusData_.size(), timeout);
 
 	if (activity < 0)
 		return WaitStatus::ERROR;
@@ -37,7 +39,7 @@ WaitStatus PollSelector::wait(int const timeout){
 }
 
 std::tuple<int, FDStatus> PollSelector::getFDStatus(uint32_t const no) const{
-	const auto &p = _statusData[no];
+	const auto &p = statusData_[no];
 	int  const fd = p.fd;
 	auto const ev = p.revents;
 
@@ -57,14 +59,14 @@ bool PollSelector::insertFD(int const fd){
 	uint32_t pos = 0;
 	bool     pok = false;
 
-	for(uint32_t i = 0; i < _maxFD; ++i){
-		if (_statusData[i].fd == fd){
+	for(uint32_t i = 0; i < statusData_.size(); ++i){
+		if (statusData_[i].fd == fd){
 			pos = i;
 			pok = true;
 			break;
 		}
 
-		if (pok == false && _statusData[i].fd < 0){
+		if (pok == false && statusData_[i].fd < 0){
 			pos = i;
 			pok = true;
 		}
@@ -73,17 +75,17 @@ bool PollSelector::insertFD(int const fd){
 	if (! pok)
 		return false;
 
-	_statusData[pos].fd = fd;
-	_statusData[pos].events = POLLIN;// | POLLOUT;
+	statusData_[pos].fd = fd;
+	statusData_[pos].events = POLLIN;// | POLLOUT;
 
 	return true;
 }
 
 bool PollSelector::removeFD(int const fd){
 	// bit ugly.
-	for(uint32_t i = 0; i < _maxFD; ++i)
-		if (_statusData[i].fd == fd){
-			_statusData[i].fd = -1;
+	for(auto &item : statusData_)
+		if (item.fd == fd){
+			item.fd = -1;
 			return true;
 		}
 
@@ -93,17 +95,17 @@ bool PollSelector::removeFD(int const fd){
 // ===========================
 
 void PollSelector::_initializeStatusData(){
-	for(uint32_t i = 0; i < _maxFD; ++i)
-		_statusData[i].fd = -1;
+	for(auto &item : statusData_)
+		item.fd = -1;
 }
 
 void PollSelector::_closeStatusData(){
-	for(uint32_t i = 0; i < _maxFD; ++i)
-		if (_statusData[i].fd >= 0)
-			::close(_statusData[i].fd);
+	for(auto &item : statusData_)
+		if (item.fd >= 0)
+			::close(item.fd);
 }
 
 
-
+} // namespace selector
 } // namespace
 

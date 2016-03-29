@@ -8,6 +8,7 @@ template<class SELECTOR, class CONNECTION>
 AsyncLoop<SELECTOR, CONNECTION>::AsyncLoop(SELECTOR &&selector, int const serverFD) :
 					_selector(std::move(selector)),
 					_serverFD(serverFD){
+	socket_makeNonBlocking(_serverFD);
 	_selector.insertFD(_serverFD);
 }
 
@@ -126,7 +127,7 @@ bool AsyncLoop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
 		return false;
 
 	if ( _insertFD(newFD) ){
-		//socket_makeNonBlocking(newFD);
+		// socket_makeNonBlocking(newFD);
 
 		__log("Connect", newFD);
 	}else{
