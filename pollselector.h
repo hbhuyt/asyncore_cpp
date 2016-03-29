@@ -31,8 +31,8 @@ public:
 	std::tuple<int, FDStatus> getFDStatus(uint32_t no) const;
 
 private:
-	void _initializeStatusData();
-	void _closeStatusData();
+	void initializeStatusData_();
+	void closeStatusData_();
 
 private:
 	std::vector<pollfd>	statusData_;

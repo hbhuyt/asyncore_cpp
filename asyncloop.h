@@ -29,17 +29,17 @@ private:
 	enum class DisconnecStatus{ NORMAL, ERROR, PROBLEM, TIMEOUT };
 
 private:
-	void _handleRead(int fd);
-	bool _handleConnect(int fd);
-	void _handleDisconnect(int fd, const DisconnecStatus &error);
+	void handleRead_(int fd);
+	bool handleConnect_(int fd);
+	void handleDisconnect_(int fd, const DisconnecStatus &error);
 
 private:
-	bool _insertFD(int fd);
-	void _removeFD(int fd);
+	bool insertFD_(int fd);
+	void removeFD_(int fd);
 	void _expireFD();
 
 private:
-	void __log(const char *s, int const fd = -1) const{
+	void log_(const char *s, int const fd = -1) const{
 		if (fd < 0)
 			printf("%-20s | clients: %5u |\n",         s, _connectedClients);
 		else

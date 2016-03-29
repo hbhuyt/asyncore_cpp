@@ -1,7 +1,7 @@
 #include "pollselector.h"
 
 #include <poll.h>	// poll
-#include <unistd.h>	// close, for _closeStatusData()
+#include <unistd.h>	// close, for closeStatusData_()
 
 namespace net{
 namespace selector{
@@ -9,7 +9,7 @@ namespace selector{
 
 PollSelector::PollSelector(uint32_t const maxFD) :
 				statusData_(maxFD){
-	_initializeStatusData();
+	initializeStatusData_();
 }
 
 PollSelector::PollSelector(PollSelector &&other) = default;
@@ -17,7 +17,7 @@ PollSelector::PollSelector(PollSelector &&other) = default;
 PollSelector &PollSelector::operator =(PollSelector &&other) = default;
 
 PollSelector::~PollSelector(){
-	_closeStatusData();
+	closeStatusData_();
 }
 
 // ===========================
@@ -94,12 +94,12 @@ bool PollSelector::removeFD(int const fd){
 
 // ===========================
 
-void PollSelector::_initializeStatusData(){
+void PollSelector::initializeStatusData_(){
 	for(auto &item : statusData_)
 		item.fd = -1;
 }
 
-void PollSelector::_closeStatusData(){
+void PollSelector::closeStatusData_(){
 	for(auto &item : statusData_)
 		if (item.fd >= 0)
 			::close(item.fd);

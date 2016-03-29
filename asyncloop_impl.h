@@ -22,11 +22,11 @@ AsyncLoop<SELECTOR, CONNECTION>::~AsyncLoop(){
 
 template<class SELECTOR, class CONNECTION>
 bool AsyncLoop<SELECTOR, CONNECTION>::process(){
-	__log("poll()-ing...");
+	log_("poll()-ing...");
 	const WaitStatus &status = _selector.wait(WAIT_TIMEOUT_MS);
 
 	if (status == WaitStatus::ERROR){
-		__log("poll() error");
+		log_("poll() error");
 
 		return false;
 	}
@@ -42,11 +42,11 @@ bool AsyncLoop<SELECTOR, CONNECTION>::process(){
 
 		switch(std::get<1>(t)){
 		case FDStatus::READ:
-			_handleRead( std::get<0>(t) );
+			handleRead_( std::get<0>(t) );
 			break;
 
 		case FDStatus::ERROR:
-			_handleDisconnect( std::get<0>(t), DisconnecStatus::ERROR );
+			handleDisconnect_( std::get<0>(t), DisconnecStatus::ERROR );
 			break;
 
 		case FDStatus::STOP:
@@ -67,9 +67,9 @@ bool AsyncLoop<SELECTOR, CONNECTION>::process(){
 // ===========================
 
 template<class SELECTOR, class CONNECTION>
-void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
+void AsyncLoop<SELECTOR, CONNECTION>::handleRead_(int const fd){
 	if (fd == _serverFD){
-		while (_handleConnect(fd));
+		while (handleConnect_(fd));
 		return;
 	}
 
@@ -78,7 +78,7 @@ void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 	auto it = _connections.find(fd);
 
 	if (it == _connections.end())
-		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
+		return handleDisconnect_(fd, DisconnecStatus::PROBLEM);
 
 	auto &c = it->second;
 
@@ -88,7 +88,7 @@ void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 
 	if (sizeRead <= 0){
 		// buffer will overfow, disconnect.
-		return _handleDisconnect(fd, DisconnecStatus::PROBLEM);
+		return handleDisconnect_(fd, DisconnecStatus::PROBLEM);
 	}
 
 	ssize_t const size = read(fd, & c.buffer[c.buffer_size], sizeRead);
@@ -101,13 +101,13 @@ void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 			return;
 		}else{
 			// error, disconnect.
-			return _handleDisconnect(fd, DisconnecStatus::ERROR);
+			return handleDisconnect_(fd, DisconnecStatus::ERROR);
 		}
 	}
 
 	if (size == 0){
 		// normal, disconnect.
-		return _handleDisconnect(fd, DisconnecStatus::NORMAL);
+		return handleDisconnect_(fd, DisconnecStatus::NORMAL);
 	}
 
 	c.buffer_size = (uint16_t) (c.buffer_size + size);
@@ -118,7 +118,7 @@ void AsyncLoop<SELECTOR, CONNECTION>::_handleRead(int const fd){
 }
 
 template<class SELECTOR, class CONNECTION>
-bool AsyncLoop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
+bool AsyncLoop<SELECTOR, CONNECTION>::handleConnect_(int const fd){
 	// fd is same as _serverFD
 	int const newFD = socket_accept(fd);
 
@@ -126,37 +126,37 @@ bool AsyncLoop<SELECTOR, CONNECTION>::_handleConnect(int const fd){
 	if (newFD < 0)
 		return false;
 
-	if ( _insertFD(newFD) ){
+	if ( insertFD_(newFD) ){
 		// socket_makeNonBlocking(newFD);
 
-		__log("Connect", newFD);
+		log_("Connect", newFD);
 	}else{
 		socket_close(newFD);
 
-		__log("Drop connect", newFD);
+		log_("Drop connect", newFD);
 	}
 
 	return true;
 }
 
 template<class SELECTOR, class CONNECTION>
-void AsyncLoop<SELECTOR, CONNECTION>::_handleDisconnect(int const fd, const DisconnecStatus &error){
-	_removeFD(fd);
+void AsyncLoop<SELECTOR, CONNECTION>::handleDisconnect_(int const fd, const DisconnecStatus &error){
+	removeFD_(fd);
 
 	socket_close(fd);
 
 	switch(error){
-	case DisconnecStatus::NORMAL	: return __log("Normal  Disconnect",  fd);
-	case DisconnecStatus::ERROR	: return __log("Error   Disconnect",  fd);
-	case DisconnecStatus::PROBLEM	: return __log("Problem Disconnect",  fd);
-	case DisconnecStatus::TIMEOUT	: return __log("Timeout Disconnect",  fd);
+	case DisconnecStatus::NORMAL	: return log_("Normal  Disconnect",  fd);
+	case DisconnecStatus::ERROR	: return log_("Error   Disconnect",  fd);
+	case DisconnecStatus::PROBLEM	: return log_("Problem Disconnect",  fd);
+	case DisconnecStatus::TIMEOUT	: return log_("Timeout Disconnect",  fd);
 	};
 }
 
 // ===========================
 
 template<class SELECTOR, class CONNECTION>
-bool AsyncLoop<SELECTOR, CONNECTION>::_insertFD(int const fd){
+bool AsyncLoop<SELECTOR, CONNECTION>::insertFD_(int const fd){
 	// one for server fd
 	if (_connectedClients + 1 >= _selector.maxFD() )
 		return false;
@@ -174,7 +174,7 @@ bool AsyncLoop<SELECTOR, CONNECTION>::_insertFD(int const fd){
 }
 
 template<class SELECTOR, class CONNECTION>
-void AsyncLoop<SELECTOR, CONNECTION>::_removeFD(int const fd){
+void AsyncLoop<SELECTOR, CONNECTION>::removeFD_(int const fd){
 	_selector.removeFD(fd);
 
 	_connections.erase(fd);
@@ -188,7 +188,7 @@ void AsyncLoop<SELECTOR, CONNECTION>::_expireFD(){
 		auto &c = p.second;
 
 		if (c.expired(CONN_TIMEOUT)){
-			_handleDisconnect(c.fd, DisconnecStatus::TIMEOUT);
+			handleDisconnect_(c.fd, DisconnecStatus::TIMEOUT);
 			// iterator is invalid now...
 			return;
 		}
