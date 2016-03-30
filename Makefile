@@ -22,7 +22,8 @@ SRC	= $(wildcard *.cc)
 UNAME	= $(shell uname -s)
 
 
-TARGETS	=	test
+TARGETS	=	test			\
+		test_redisprotocol
 
 
 ifeq ($(UNAME), Linux)
@@ -46,6 +47,8 @@ test: test.o time.o sockets.o pollselector.o
 test_epoll: test_epoll.o time.o sockets.o epollselector.o
 	$(LINK) $@ $^			$(LIBS)
 
+test_redisprotocol: test_redisprotocol.o redisprotocol.o
+	$(LINK) $@ $^			$(LIBS)
 
 %.o: %.cc
 	$(CXX) $<
