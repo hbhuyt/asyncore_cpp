@@ -1,20 +1,15 @@
-#ifndef _REDIS_CPP_H
-#define _REDIS_CPP_H
+#ifndef _REDIS_PROTOCOL_H
+#define _REDIS_PROTOCOL_H
 
 #include "stringref.h"
 #include "checkedvalue.h"
+
+#include "protocoldefs.h"
 
 #include <vector>
 #include <iostream>
 
 namespace Protocol{
-
-
-enum class Status{
-	OK,
-	BUFFER_NOT_READ,
-	ERROR
-};
 
 
 class RedisProtocol{
@@ -50,7 +45,7 @@ private:
 	constexpr static char	STAR		= '*';
 	constexpr static char	DOLLAR		= '$';
 
-	constexpr static size_t	INT_BUFFER_SIZE	= 5;	// to be able to store MAX_PARAM_SIZE as string.
+	constexpr static size_t	INT_BUFFER_SIZE	= 8;	// to be able to store MAX_PARAM_SIZE as string.
 	constexpr static size_t	MAX_PARAMS	= 4;	// setex name 100 hello
 	constexpr static size_t	MAX_PARAM_SIZE	= 16 * 1024;
 
