@@ -7,12 +7,13 @@
 #include "protocoldefs.h"
 
 #include <vector>
-#include <iostream>
 
-namespace Protocol{
-
+namespace protocol{
 
 class RedisProtocol{
+public:
+	using Status = defs::ProtocolStatus;
+
 public:
 	RedisProtocol(){
 		params_.reserve(MAX_PARAMS);
@@ -21,10 +22,7 @@ public:
 public:
 	Status operator()(const StringRef &src);
 
-	void dump(std::ostream &os = std::cout) const{
-		for(const auto &item : params_ )
-			os << item << std::endl;
-	}
+	void print() const;
 
 private:
 	static int readInt_(const StringRef &src, size_t &pos);

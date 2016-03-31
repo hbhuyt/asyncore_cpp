@@ -1,12 +1,11 @@
 #ifndef _NET_EPOLL_SELECTOR_H
 #define _NET_EPOLL_SELECTOR_H
 
-#include "statuses.h"
+#include "selectordefs.h"
 
 #include <cstdint>
 
 #include <vector>
-#include <tuple>
 
 struct epoll_event;
 
@@ -30,7 +29,7 @@ public:
 
 	WaitStatus wait(int timeout);
 
-	std::tuple<int, FDStatus> getFDStatus(uint32_t no) const;
+	FDResult getFDStatus(uint32_t no) const;
 
 private:
 	void _initializeEPoll();

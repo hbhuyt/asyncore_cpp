@@ -3,15 +3,17 @@
 
 #endif
 
-namespace Protocol{
+namespace protocol{
 
+namespace defs{
 
-enum class Status{
-	OK,
-	BUFFER_NOT_READ,
-	ERROR
-};
+	enum class ProtocolStatus{
+		OK,
+		BUFFER_NOT_READ,
+		ERROR
+	};
 
+} // defs
 
 } // namespace
 

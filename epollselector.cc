@@ -60,23 +60,23 @@ WaitStatus EPollSelector::wait(int const timeout){
 	return WaitStatus::OK;
 }
 
-std::tuple<int, FDStatus> EPollSelector::getFDStatus(uint32_t const no) const{
+FDResult EPollSelector::getFDStatus(uint32_t const no) const{
 	if (no < (uint32_t) statusCount_){
 		const epoll_event &ev = statusData_[no];
 
 		int const fd = ev.data.fd;
 
 		if (ev.events & EPOLLERR)
-			return std::make_tuple(fd, FDStatus::ERROR);
+			return { fd, FDStatus::ERROR };
 
 		if ((ev.events & EPOLLIN) || (ev.events & EPOLLHUP))
-			return std::make_tuple(fd, FDStatus::READ);
+			return { fd, FDStatus::READ };
 
 		if (ev.events & EPOLLOUT)
-			return std::make_tuple(fd, FDStatus::WRITE);
+			return { fd, FDStatus::WRITE };
 	}
 
-	return std::make_tuple(-1, FDStatus::STOP);
+	return FDStatus::STOP;
 }
 
 bool EPollSelector::insertFD(int const fd){

@@ -2,8 +2,9 @@
 
 #include <iostream>
 
-const char *test_status(const Protocol::Status &status){
-	using Status = Protocol::Status;
+template <class PROTOCOL_STATUS>
+const char *test_status(const PROTOCOL_STATUS status){
+	using Status = PROTOCOL_STATUS;
 
 	switch(status){
 	case Status::OK			: return "OK"		;
@@ -14,8 +15,8 @@ const char *test_status(const Protocol::Status &status){
 }
 
 template <class PROTOCOL>
-void test(PROTOCOL &&p, const char *data){
-	using Status = Protocol::Status;
+void test(PROTOCOL &p, const char *data){
+	using Status = typename PROTOCOL::Status;
 
 	const Status status = p(data);
 
@@ -24,7 +25,7 @@ void test(PROTOCOL &&p, const char *data){
 	;
 
 	if (status == Status::OK)
-		p.dump();
+		p.print();
 
 	std::cout	<< "---(eof)---" << std::endl
 			<< std::endl
@@ -33,7 +34,7 @@ void test(PROTOCOL &&p, const char *data){
 
 
 int main(){
-	Protocol::RedisProtocol p;
+	protocol::RedisProtocol p;
 
 	test(p, "*3\r\n$3\r\nSET\r\n$4\r\ncity\r\n$5\r\nSofia\r\n");
 
@@ -44,7 +45,7 @@ int main(){
 	test(p, "*2\r\n*3\r\nGET\r\n$4\r\ncity\r\n");
 
 #if 0
-	using Status = Protocol::Status;
+	using Status = protocol::RedisProtocol::Status;
 
 	const char *data = "*3\r\n$3\r\nSET\r\n$4\r\ncity\r\n$5\r\nSofia\r\n";
 

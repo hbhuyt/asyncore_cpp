@@ -6,6 +6,19 @@
 namespace net{
 namespace selector{
 
+namespace{
+
+auto pollConvert(const FDEvent event) -> decltype(pollfd::events){
+	switch(event){
+		default:
+		case FDEvent::READ	: return POLLIN;
+		case FDEvent::WRITE	: return POLLOUT;
+	}
+}
+
+}
+
+// ===========================
 
 PollSelector::PollSelector(uint32_t const maxFD) :
 				statusData_(maxFD){
@@ -38,24 +51,24 @@ WaitStatus PollSelector::wait(int const timeout){
 	return WaitStatus::OK;
 }
 
-std::tuple<int, FDStatus> PollSelector::getFDStatus(uint32_t const no) const{
+FDResult PollSelector::getFDStatus(uint32_t const no) const{
 	const auto &p = statusData_[no];
 	int  const fd = p.fd;
 	auto const ev = p.revents;
 
 	if (ev & POLLERR)
-		return std::make_tuple(fd, FDStatus::ERROR);
+		return { fd, FDStatus::ERROR };
 
 	if (ev & POLLIN)
-		return std::make_tuple(fd, FDStatus::READ);
+		return { fd, FDStatus::READ };
 
 	if (ev & POLLOUT)
-		return std::make_tuple(fd, FDStatus::WRITE);
+		return { fd, FDStatus::WRITE };
 
-	return std::make_tuple(fd, FDStatus::NONE);
+	return { fd, FDStatus::NONE };
 }
 
-bool PollSelector::insertFD(int const fd){
+bool PollSelector::insertFD(int const fd, FDEvent event){
 	uint32_t pos = 0;
 	bool     pok = false;
 
@@ -76,9 +89,20 @@ bool PollSelector::insertFD(int const fd){
 		return false;
 
 	statusData_[pos].fd = fd;
-	statusData_[pos].events = POLLIN;// | POLLOUT;
+	statusData_[pos].events = pollConvert(event);
 
 	return true;
+}
+
+bool PollSelector::updateFD(int fd, FDEvent event){
+	// bit ugly.
+	for(auto &item : statusData_)
+		if (item.fd == fd){
+			item.events = pollConvert(event);
+			return true;
+		}
+
+	return false;
 }
 
 bool PollSelector::removeFD(int const fd){

@@ -1,7 +1,10 @@
 #include "redisprotocol.h"
 
 
-namespace Protocol{
+#include <iostream>
+
+
+namespace protocol{
 
 
 enum class RedisProtocol::Error{
@@ -13,9 +16,16 @@ enum class RedisProtocol::Error{
 };
 
 
-Status RedisProtocol::operator()(const StringRef &src){
-	if (src.size() < 8)	// 4 bytes - "*1\r\n$1\r\n"
-		return Status::BUFFER_NOT_READ;
+void RedisProtocol::print() const{
+	for(const auto &item : params_ )
+		std::cout << item << std::endl;
+}
+
+
+auto RedisProtocol::operator()(const StringRef &src) -> Status{
+	// this doing more harm than relps.
+//	if (src.size() < 8)	// 4 bytes - "*1\r\n$1\r\n"
+//		return Status::BUFFER_NOT_READ;
 
 	size_t pos = 0;
 
@@ -73,7 +83,7 @@ int RedisProtocol::readInt_(const StringRef &src, size_t &pos){
 }
 
 
-Status RedisProtocol::readLn_(const StringRef &src, size_t &pos){
+auto RedisProtocol::readLn_(const StringRef &src, size_t &pos) -> Status{
 	if (pos + 1 > src.size())
 		return Status::BUFFER_NOT_READ;
 

@@ -1,11 +1,10 @@
 #ifndef _NET_POLL_SELECTOR_H
 #define _NET_POLL_SELECTOR_H
 
-#include "statuses.h"
+#include "selectordefs.h"
 
 #include <cstdint>
 
-#include <tuple>
 #include <vector>
 
 struct pollfd;
@@ -23,16 +22,19 @@ public:
 
 	uint32_t maxFD() const;
 
-	bool insertFD(int fd);
+	bool insertFD(int fd, FDEvent event = FDEvent::READ);
+	bool updateFD(int fd, FDEvent event);
 	bool removeFD(int fd);
 
 	WaitStatus wait(int timeout);
 
-	std::tuple<int, FDStatus> getFDStatus(uint32_t no) const;
+	FDResult getFDStatus(uint32_t no) const;
 
 private:
 	void initializeStatusData_();
 	void closeStatusData_();
+
+
 
 private:
 	std::vector<pollfd>	statusData_;
