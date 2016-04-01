@@ -5,7 +5,7 @@ CXX_OPT	= -g
 CXX_OPT	= -O9
 CXX_OPT	=
 
-CXX	= $(MYCC) -std=c++11 -Wall  -Wconversion 	\
+CXX	= $(MYCC) -std=c++11 -Wall -Wconversion -Wpedantic 	\
 		-MMD -MP		\
 		$(CXX_OPT)		\
 		-c
@@ -23,6 +23,7 @@ UNAME	= $(shell uname -s)
 
 
 TARGETS	=	test_poll		\
+		test_iobuffer	\
 		test_redisprotocol
 
 
@@ -40,10 +41,13 @@ clean:
 			$(TARGETS)
 
 
-test_poll: test_poll.o pollselector.o		time.o sockets.o redisprotocol.o
+test_poll: test_poll.o pollselector.o		time.o sockets.o
 	$(LINK) $@ $^			$(LIBS)
 
-test_epoll: test_epoll.o epollselector.o	time.o sockets.o redisprotocol.o
+test_epoll: test_epoll.o epollselector.o	time.o sockets.o
+	$(LINK) $@ $^			$(LIBS)
+
+test_iobuffer: test_iobuffer.o
 	$(LINK) $@ $^			$(LIBS)
 
 test_redisprotocol: test_redisprotocol.o redisprotocol.o

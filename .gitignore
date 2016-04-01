@@ -12,5 +12,7 @@ callgrind.out.*
 test_poll
 test_epoll
 
+test_iobuffer
+
 test_redisprotocol
 

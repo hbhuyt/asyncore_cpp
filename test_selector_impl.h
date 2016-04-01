@@ -3,17 +3,15 @@
 
 #include "sockets.h"
 #include "asyncloop.h"
-#include "redisprotocol.h"
+#include "echoworker.h"
 
 int main(){
 	using MySelector = MySelector;
-	using MyProtocol = protocol::RedisProtocol;
-
-
+	using MyWorker   = net::EchoWorker;
 
 	int const fd = net::socket_create("localhost.not.used.yet", 2000);
 
-	net::AsyncLoop<MySelector, MyProtocol> loop( MySelector{ 4 }, MyProtocol{}, fd );
+	net::AsyncLoop<MySelector, MyWorker> loop( MySelector{ 4 }, MyWorker{}, fd );
 
 	while(loop.process());
 }

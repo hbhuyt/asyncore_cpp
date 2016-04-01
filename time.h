@@ -7,7 +7,7 @@ namespace net{
 
 uint32_t now();
 
-}; // namespace
+} // namespace
 
 #endif
 
