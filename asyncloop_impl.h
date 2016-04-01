@@ -1,11 +1,13 @@
 #include "sockets.h"
 
+#include "stringref.h"
+
 #include <unistd.h>	// read
 
 namespace net{
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::AsyncLoop(SELECTOR &&selector, PROTOCOL &&protocol, int const serverFD) :
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::AsyncLoop(SELECTOR &&selector, PROTOCOL &&protocol, int const serverFD) :
 					selector_(std::move(selector)),
 					protocol_(std::move(protocol)),
 					serverFD_(serverFD){
@@ -13,16 +15,19 @@ AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::AsyncLoop(SELECTOR &&sele
 	selector_.insertFD(serverFD_);
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::~AsyncLoop(){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::~AsyncLoop(){
 	// serverFD_ will be closed if we close epoll
 	selector_.removeFD(serverFD_);
 }
 
 // ===========================
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::process(){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::process(){
+	using WaitStatus = selector::WaitStatus;
+	using FDStatus   = selector::FDStatus;
+
 	log_("poll()-ing...");
 	const WaitStatus status = selector_.wait(WAIT_TIMEOUT_MS);
 
@@ -71,8 +76,8 @@ bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::process(){
 
 // ===========================
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleRead_(int const fd){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleRead_(int const fd){
 	if (fd == serverFD_){
 		while (handleConnect_(fd));
 		return;
@@ -85,35 +90,28 @@ void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleRead_(int cons
 	if (it == connections_.end())
 		return handleDisconnect_(fd, DisconnectStatus::PROBLEM_MAP_NOT_FOUND);
 
-	auto &c = it->second;
+	auto &connection = it->second;
+	auto &buffer = connection.buffer;
 
 	// -------------------------------------
 
-	ssize_t const sizeRead = c.buffer_max - c.buffer_size;
-
-	if (sizeRead <= 0){
+	if (buffer.availableReadSize() <= 0){
 		// buffer will overfow, disconnect.
 		return handleDisconnect_(fd, DisconnectStatus::PROBLEM_BUFFER_READ);
 	}
 
-	ssize_t const size = read(fd, & c.buffer[c.buffer_size], sizeRead);
-
-	// -------------------------------------
+	ssize_t const size = buffer.read(fd);
 
 	if (size <= 0)
 		return handleSocketOps_(fd, size);
 
-	c.buffer_size = (uint16_t) (c.buffer_size + size);
+	connection.restartTimer();
 
-	handleProtocol_(fd, c);
-
-	c.refresh();
-
-	//printf("%5d | %5u | [begin]%.*s[end]\n", fd, c.buffer_size, (int) c.buffer_size, c.buffer);
+	handleProtocol_(fd, connection);
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleWrite_(int const fd){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleWrite_(int const fd){
 	if (fd == serverFD_){
 		// WTF?!?
 		return;
@@ -126,51 +124,43 @@ void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleWrite_(int con
 	if (it == connections_.end())
 		return handleDisconnect_(fd, DisconnectStatus::PROBLEM_MAP_NOT_FOUND);
 
-	auto &c = it->second;
+	auto &connection = it->second;
+	auto &buffer = connection.buffer;
 
 	// -------------------------------------
 
-	ssize_t const sizeWrite = c.buffer_size - c.buffer_start;
-
-	if (sizeWrite <= 0){
+	if (buffer.availableWriteSize() <= 0){
 		// this could never happen, disconnect.
 		return handleDisconnect_(fd, DisconnectStatus::PROBLEM_BUFFER_WRITE);
 	}
 
-	ssize_t const size = write(fd, & c.buffer[c.buffer_start], sizeWrite);
+	ssize_t const size = buffer.write(fd);
 
 	// -------------------------------------
 
 	if (size <= 0)
 		return handleSocketOps_(fd, size);
 
-	c.refresh();
+	connection.restartTimer();
 
-	if (size == sizeWrite){
+	if (buffer.availableWriteSize() == 0){
 		// process with read
-		selector_.updateFD(fd, FDEvent::READ);
-		c.clear();
+		selector_.updateFD(fd, selector::FDEvent::READ);
 
 		return;
 	}
-
-	if (size > sizeWrite){
-		// this could never happen, buffer overflow already!!! halt
-		log_("Buffer overflow detected");
-		return handleDisconnect_(fd, DisconnectStatus::PROBLEM_BUFFER_WRITE);
-	}
-
-	c.buffer_start = (uint16_t) (c.buffer_start + size);
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleProtocol_(int const fd, AsyncConnection &connection){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleProtocol_(int const fd, CONNECTION &connection){
 	static const char *redis_ok  = "$2\r\nOK\r\n";
 	static const char *redis_err = "-ERR Error\r\n";
 
 	using Status = ProtocolStatus;
 
-	const Status status = protocol_( connection.getStringRef() );
+	const StringRef sr{ connection.buffer.data, connection.buffer.size };
+
+	const Status status = protocol_( sr );
 
 	switch( status ){
 	case Status::BUFFER_NOT_READ:
@@ -184,9 +174,9 @@ bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleProtocol_(int 
 		printf("Dump data from protocol...\n");
 		protocol_.print();
 
-		connection.setData(redis_ok, strlen(redis_ok));
+		connection.buffer.set(redis_ok, strlen(redis_ok));
 
-		selector_.updateFD(fd, FDEvent::WRITE);
+		selector_.updateFD(fd, selector::FDEvent::WRITE);
 
 		return true;
 
@@ -196,16 +186,16 @@ bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleProtocol_(int 
 
 		printf("ERROR IN PROTOCOL...\n");
 
-		connection.setData(redis_err, strlen(redis_err));
+		connection.buffer.set(redis_err, strlen(redis_err));
 
-		selector_.updateFD(fd, FDEvent::WRITE);
+		selector_.updateFD(fd, selector::FDEvent::WRITE);
 
 		return true;
 	}
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleConnect_(int const fd){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleConnect_(int const fd){
 	// fd is same as serverFD_
 	int const newFD = socket_accept(fd);
 
@@ -226,8 +216,8 @@ bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleConnect_(int c
 	return true;
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleDisconnect_(int const fd, const DisconnectStatus error){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleDisconnect_(int const fd, const DisconnectStatus error){
 	removeFD_(fd);
 
 	socket_close(fd);
@@ -245,8 +235,8 @@ void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleDisconnect_(in
 
 // ===========================
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleSocketOps_(int const fd, ssize_t const size){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::handleSocketOps_(int const fd, ssize_t const size){
 	if (size < 0){
 		if ( socket_check_eagain() ){
 			// try again
@@ -265,8 +255,8 @@ void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::handleSocketOps_(int
 
 // ===========================
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::insertFD_(int const fd){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::insertFD_(int const fd){
 	// one for server fd
 	if (connectedClients_ + 1 >= selector_.maxFD() )
 		return false;
@@ -283,8 +273,8 @@ bool AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::insertFD_(int const 
 	return true;
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::removeFD_(int const fd){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::removeFD_(int const fd){
 	selector_.removeFD(fd);
 
 	connections_.erase(fd);
@@ -292,13 +282,13 @@ void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::removeFD_(int const 
 	--connectedClients_;
 }
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE>
-void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION_BUFFER_SIZE>::expireFD_(){
+template<class SELECTOR, class PROTOCOL, class CONNECTION>
+void AsyncLoop<SELECTOR, PROTOCOL, CONNECTION>::expireFD_(){
 	for(const auto &p : connections_){
 		auto &c = p.second;
 
 		if (c.expired(CONN_TIMEOUT)){
-			handleDisconnect_(c.fd, DisconnectStatus::TIMEOUT);
+			handleDisconnect_(c.fd(), DisconnectStatus::TIMEOUT);
 			// iterator is invalid now...
 			return;
 		}

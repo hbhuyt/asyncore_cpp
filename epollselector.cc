@@ -1,15 +1,28 @@
 #include "epollselector.h"
 
 #include <sys/epoll.h>	// epoll
-#include <unistd.h>	// close, for _closeEPoll()
+#include <unistd.h>	// close, for closeEPoll_()
 
 namespace net{
 namespace selector{
 
 
+namespace{
+
+auto epollConvert(const FDEvent event) -> decltype(epoll_event::events){
+	switch(event){
+		default:
+		case FDEvent::READ	: return EPOLLIN;
+		case FDEvent::WRITE	: return EPOLLOUT;
+	}
+}
+
+}
+
+
 EPollSelector::EPollSelector(uint32_t const maxFD) :
 				statusData_(maxFD){
-	_initializeEPoll();
+	initializeEPoll_();
 }
 
 EPollSelector::EPollSelector(EPollSelector &&other) :
@@ -36,7 +49,7 @@ void EPollSelector::swap(EPollSelector &other){
 
 
 EPollSelector::~EPollSelector(){
-	_closeEPoll();
+	closeEPoll_();
 }
 
 // ===========================
@@ -79,12 +92,20 @@ FDResult EPollSelector::getFDStatus(uint32_t const no) const{
 	return FDStatus::STOP;
 }
 
-bool EPollSelector::insertFD(int const fd){
+bool EPollSelector::insertFD(int const fd, FDEvent const event){
+	return mutateFD_(fd, event, EPOLL_CTL_ADD);
+}
+
+bool EPollSelector::updateFD(int const fd, FDEvent const event){
+	return mutateFD_(fd, event, EPOLL_CTL_MOD);
+}
+
+bool EPollSelector::mutateFD_(int const fd, FDEvent const event, int const op){
 	epoll_event ev;
-	ev.events = EPOLLIN;
+	ev.events = epollConvert(event);
 	ev.data.fd = fd;
 
-	int const result = epoll_ctl(epollFD_, EPOLL_CTL_ADD, fd, &ev);
+	int const result = epoll_ctl(epollFD_, op, fd, &ev);
 
 	return result >= 0;
 }
@@ -97,11 +118,11 @@ bool EPollSelector::removeFD(int const fd){
 
 // ===========================
 
-void EPollSelector::_initializeEPoll(){
+void EPollSelector::initializeEPoll_(){
 	epollFD_ = epoll_create((int) statusData_.size());
 }
 
-void EPollSelector::_closeEPoll(){
+void EPollSelector::closeEPoll_(){
 	::close(epollFD_);
 }
 

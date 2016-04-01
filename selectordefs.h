@@ -2,6 +2,7 @@
 #define _NET_STATUS_H
 
 namespace net{
+namespace selector{
 
 enum class WaitStatus{ OK, NONE, ERROR };
 
@@ -17,6 +18,7 @@ struct FDResult{
 	constexpr FDResult(FDStatus const status) : FDResult(-1, status){}
 };
 
+} // selector
 } // namespace
 
 #endif

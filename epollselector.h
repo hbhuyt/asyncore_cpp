@@ -24,7 +24,8 @@ public:
 
 	uint32_t maxFD() const;
 
-	bool insertFD(int fd);
+	bool insertFD(int fd, FDEvent event = FDEvent::READ);
+	bool updateFD(int fd, FDEvent event);
 	bool removeFD(int fd);
 
 	WaitStatus wait(int timeout);
@@ -32,8 +33,10 @@ public:
 	FDResult getFDStatus(uint32_t no) const;
 
 private:
-	void _initializeEPoll();
-	void _closeEPoll();
+	void initializeEPoll_();
+	void closeEPoll_();
+
+	bool mutateFD_(int fd, FDEvent event, int op);
 
 private:
 	int				epollFD_;

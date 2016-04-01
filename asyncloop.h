@@ -8,7 +8,7 @@
 
 namespace net{
 
-template<class SELECTOR, class PROTOCOL, size_t CONNECTION_BUFFER_SIZE = 1024>
+template<class SELECTOR, class PROTOCOL, class CONNECTION = Connection<1024> >
 class AsyncLoop{
 public:
 	constexpr static int  WAIT_TIMEOUT	=  5;
@@ -38,15 +38,14 @@ private:
 
 	using ProtocolStatus		= typename PROTOCOL::Status;
 
-	using AsyncConnection		= Connection<CONNECTION_BUFFER_SIZE>;
-	using ConnectionContainer	= std::map<int, AsyncConnection>;
+	using ConnectionContainer	= std::map<int, CONNECTION>;
 
 private:
 	void handleRead_(int fd);
 	void handleWrite_(int fd);
 	bool handleConnect_(int fd);
 	void handleDisconnect_(int fd, const DisconnectStatus error);
-	bool handleProtocol_(int fd, AsyncConnection &connection);
+	bool handleProtocol_(int fd, CONNECTION &connection);
 
 	void handleSocketOps_(int fd, ssize_t size);
 

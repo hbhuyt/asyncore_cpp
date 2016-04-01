@@ -28,7 +28,7 @@ TARGETS	=	test_poll		\
 
 ifeq ($(UNAME), Linux)
 	# add epoll support...
-#	TARGETS	+= test_epoll
+	TARGETS	+= test_epoll
 endif
 
 
