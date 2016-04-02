@@ -4,11 +4,12 @@
 namespace net{
 
 	enum class WorkerStatus{
-		BUFFER_NOT_READ,
+		PASS,
 		READ,
 		WRITE,
 		DISCONNECT,
 		DISCONNECT_ERROR,
+		SHUTDOWN
 	};
 
 } // namespace

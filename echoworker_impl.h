@@ -5,19 +5,29 @@ namespace net{
 
 template<class CONNECTION>
 WorkerStatus EchoWorker::operator()(CONNECTION &buffer){
-	static size_t const cmd_exit_len = strlen(cmd_exit);
-	static size_t const cmd_helo_len = strlen(cmd_helo);
-
 	if (buffer.size() == 0)
-		return WorkerStatus::BUFFER_NOT_READ;
+		return WorkerStatus::PASS;
 
-	if (buffer.size() == cmd_exit_len && strncmp(buffer.data(), cmd_exit, cmd_exit_len) == 0){
+	// buffer.print();
+
+	if (cmp_(cmd_shutdown, buffer)){
+		return WorkerStatus::SHUTDOWN;
+	}
+
+	if (cmp_(cmd_exit, buffer)){
 		return WorkerStatus::DISCONNECT;
 	}
 
-	if (buffer.size() == cmd_helo_len && strncmp(buffer.data(), cmd_helo, cmd_helo_len) == 0){
+
+	if (cmp_(cmd_hello, buffer)){
 		buffer.clear();
-		buffer.push("Hello, how are you?\r\n");
+		buffer.push_c("Hello, how are you?\r\n");
+		return WorkerStatus::WRITE;
+	}
+
+	if (cmp_(cmd_help, buffer)){
+		buffer.clear();
+		buffer.push_c( msg_help );
 		return WorkerStatus::WRITE;
 	}
 

@@ -5,8 +5,6 @@
 #include <cstring>
 #include <cstdio>
 
-#include <unistd.h>	// read
-
 namespace net{
 
 template<size_t CAPACITY>
@@ -52,6 +50,11 @@ public:
 
 	bool push(const char *p){
 		return p ? push(strlen(p), p) : false;
+	}
+
+	template<size_t N>
+	bool push_c(const char (&p)[N]){
+		return push(N - 1, p);
 	}
 
 	bool push(size_t const len, const void *ptr = nullptr){

@@ -69,6 +69,7 @@ private:
 	int			serverFD_;
 	ClientBufferContainer	clients_;
 	uint32_t		connectedClients_ = 0;
+	bool			keepProcessing_ = true;
 };
 
 

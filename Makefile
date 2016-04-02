@@ -41,10 +41,10 @@ clean:
 			$(TARGETS)
 
 
-test_poll: test_poll.o pollselector.o		time.o sockets.o
+test_poll: test_poll.o pollselector.o		time.o sockets.o echoworker.o
 	$(LINK) $@ $^			$(LIBS)
 
-test_epoll: test_epoll.o epollselector.o	time.o sockets.o
+test_epoll: test_epoll.o epollselector.o	time.o sockets.o echoworker.o
 	$(LINK) $@ $^			$(LIBS)
 
 test_iobuffer: test_iobuffer.o

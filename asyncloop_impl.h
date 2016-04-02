@@ -30,6 +30,8 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::process(){
 	using WaitStatus = selector::WaitStatus;
 	using FDStatus   = selector::FDStatus;
 
+	keepProcessing_ = true;
+
 	log_("poll()-ing...");
 	const WaitStatus status = selector_.wait(WAIT_TIMEOUT_MS);
 
@@ -73,7 +75,7 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::process(){
 
 	break2: // label for goto... ;)
 
-	return true;
+	return keepProcessing_;
 }
 
 // ===========================
@@ -167,7 +169,7 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleWorker_(int const fd, CLIE
 	const WorkerStatus status = worker_( buffer );
 
 	switch( status ){
-	case WorkerStatus::BUFFER_NOT_READ:
+	case WorkerStatus::PASS:
 		return false;
 
 	case WorkerStatus::READ:
@@ -182,6 +184,12 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleWorker_(int const fd, CLIE
 
 	case WorkerStatus::DISCONNECT:
 		handleDisconnect_(fd, DisconnectStatus::WORKER_NORMAL);
+
+		return true;
+
+	case WorkerStatus::SHUTDOWN:
+	//	handleDisconnect_(fd, DisconnectStatus::WORKER_NORMAL);
+		keepProcessing_ = false;
 
 		return true;
 
