@@ -1,13 +1,21 @@
 #include "echoworker.h"
 
 namespace net{
+namespace worker{
 
-constexpr char EchoWorker::cmd_hello[];
-constexpr char EchoWorker::cmd_help[];
-constexpr char EchoWorker::cmd_exit[];
-constexpr char EchoWorker::cmd_shutdown[];
+const StringRef EchoWorker::cmd_hello		= "hello\r\n";
+const StringRef EchoWorker::cmd_help		= "help\r\n";
+const StringRef EchoWorker::cmd_exit		= "exit\r\n";
+const StringRef EchoWorker::cmd_shutdown	= "shutdown\r\n";
 
-constexpr char EchoWorker::msg_help[];
+const StringRef EchoWorker::msg_help		=
+				"Usage:\r\n"
+				"   hello    - greeting\r\n"
+				"   help     - this message\r\n"
+				"   exit     - disconnect\r\n"
+				"   shutdown - shutdown the server\r\n"
+				"\r\n";
 
+} // namespace worker
 } // namespace
 

@@ -9,8 +9,11 @@ _ot/*
 
 callgrind.out.*
 
-test_poll
-test_epoll
+test_echo_poll
+test_echo_epoll
+
+test_redis_poll
+test_redis_epoll
 
 test_iobuffer
 

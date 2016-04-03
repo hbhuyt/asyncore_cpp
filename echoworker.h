@@ -3,9 +3,10 @@
 
 #include "workerdefs.h"
 
-#include <cstdlib>
+#include "stringref.h"
 
 namespace net{
+namespace worker{
 
 class EchoWorker{
 public:
@@ -13,27 +14,21 @@ public:
 	WorkerStatus operator()(CONNECTION &buffer);
 
 private:
-	constexpr static char cmd_hello[]	= "hello\r\n";
-	constexpr static char cmd_help[]	= "help\r\n";
-	constexpr static char cmd_exit[]	= "exit\r\n";
-	constexpr static char cmd_shutdown[]	= "shutdown\r\n";
+	static const StringRef cmd_hello;
+	static const StringRef cmd_help;
+	static const StringRef cmd_exit;
+	static const StringRef cmd_shutdown;
 
-	constexpr static char msg_help[]	=
-				"Usage:\r\n"
-				"   hello    - greeting\r\n"
-				"   help     - this message\r\n"
-				"   exit     - disconnect\r\n"
-				"   shutdown - shutdown the server\r\n"
-				"\r\n";
+	static const StringRef msg_help;
 
 private:
-	template<size_t N, class CONNECTION>
-	constexpr static bool cmp_(const char (&cmd)[N], const CONNECTION &b){
-		return N - 1 == b.size() && strncmp(cmd, b.data(), N - 1) == 0;
+	template<class CONNECTION>
+	static bool cmp_(const StringRef &cmd, const CONNECTION &b){
+		return cmd.compare(b.data(), b.size()) == 0;
 	}
-
 };
 
+} // namespace worker
 } // namespace
 
 // ==================================

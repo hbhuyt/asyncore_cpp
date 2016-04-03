@@ -34,7 +34,7 @@ void test(PROTOCOL &p, const char *data){
 
 
 int main(){
-	protocol::RedisProtocol p;
+	net::protocol::RedisProtocol p;
 
 	test(p, "*3\r\n$3\r\nSET\r\n$4\r\ncity\r\n$5\r\nSofia\r\n");
 
@@ -45,7 +45,7 @@ int main(){
 	test(p, "*2\r\n*3\r\nGET\r\n$4\r\ncity\r\n");
 
 #if 0
-	using Status = protocol::RedisProtocol::Status;
+	using Status = net::protocol::RedisProtocol::Status;
 
 	const char *data = "*3\r\n$3\r\nSET\r\n$4\r\ncity\r\n$5\r\nSofia\r\n";
 

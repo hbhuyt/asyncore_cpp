@@ -4,7 +4,14 @@
 #include <iostream>
 
 
+namespace net{
 namespace protocol{
+
+
+const StringRef	RedisProtocol::RESPONSE_OK	= "$2\r\nOK\r\n";
+const StringRef	RedisProtocol::RESPONSE_ERROR	= "-ERR Error\r\n";
+
+const StringRef	RedisProtocol::CMD_SHUTDOWN	= "shutdown";
 
 
 enum class RedisProtocol::Error{
@@ -138,5 +145,6 @@ auto RedisProtocol::readParam_(const StringRef &src, size_t &pos) -> CheckedStri
 }
 
 
+} // namespace protocol
 } // namespace
 

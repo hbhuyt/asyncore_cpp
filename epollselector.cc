@@ -19,6 +19,7 @@ auto epollConvert(const FDEvent event) -> decltype(epoll_event::events){
 
 }
 
+// ===========================
 
 EPollSelector::EPollSelector(uint32_t const maxFD) :
 				statusData_(maxFD){

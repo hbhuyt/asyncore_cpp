@@ -1,11 +1,8 @@
-#ifndef _MY_PROTOCOL_H
-#define _MY_PROTOCOL_H
+#ifndef _PROTOCOL_DEFS_H
+#define _PROTOCOL_DEFS_H
 
-#endif
-
+namespace net{
 namespace protocol{
-
-namespace defs{
 
 	enum class ProtocolStatus{
 		OK,
@@ -13,7 +10,8 @@ namespace defs{
 		ERROR
 	};
 
-} // defs
-
+} // namespace protocol
 } // namespace
+
+#endif
 

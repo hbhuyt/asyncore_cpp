@@ -2,6 +2,7 @@
 #include <cstring>
 
 namespace net{
+namespace worker{
 
 template<class CONNECTION>
 WorkerStatus EchoWorker::operator()(CONNECTION &buffer){
@@ -21,18 +22,19 @@ WorkerStatus EchoWorker::operator()(CONNECTION &buffer){
 
 	if (cmp_(cmd_hello, buffer)){
 		buffer.clear();
-		buffer.push_c("Hello, how are you?\r\n");
+		buffer.push("Hello, how are you?\r\n");
 		return WorkerStatus::WRITE;
 	}
 
 	if (cmp_(cmd_help, buffer)){
 		buffer.clear();
-		buffer.push_c( msg_help );
+		buffer.push(msg_help);
 		return WorkerStatus::WRITE;
 	}
 
 	return WorkerStatus::WRITE;
 }
 
+} // namespace worker
 } // namespace
 

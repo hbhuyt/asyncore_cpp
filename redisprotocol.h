@@ -8,11 +8,12 @@
 
 #include <vector>
 
+namespace net{
 namespace protocol{
 
 class RedisProtocol{
 public:
-	using Status = defs::ProtocolStatus;
+	using Status = ProtocolStatus;
 
 public:
 	RedisProtocol(){
@@ -21,6 +22,10 @@ public:
 
 public:
 	Status operator()(const StringRef &src);
+
+	const std::vector<StringRef> &getParams() const{
+		return params_;
+	}
 
 	void print() const;
 
@@ -39,6 +44,12 @@ private:
 		return Status::ERROR;
 	}
 
+public:
+	static const StringRef	RESPONSE_OK;
+	static const StringRef	RESPONSE_ERROR;
+
+	static const StringRef	CMD_SHUTDOWN;
+
 private:
 	constexpr static char	STAR		= '*';
 	constexpr static char	DOLLAR		= '$';
@@ -52,6 +63,7 @@ private:
 };
 
 
+} // namespace protocol
 } // namespace
 
 #endif

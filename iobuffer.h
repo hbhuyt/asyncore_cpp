@@ -1,6 +1,8 @@
 #ifndef _IO_BUFFER_H
 #define _IO_BUFFER_H
 
+#include "stringref.h"
+
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
@@ -52,9 +54,8 @@ public:
 		return p ? push(strlen(p), p) : false;
 	}
 
-	template<size_t N>
-	bool push_c(const char (&p)[N]){
-		return push(N - 1, p);
+	bool push(const StringRef &sr){
+		return push(sr.size(), sr.data());
 	}
 
 	bool push(size_t const len, const void *ptr = nullptr){

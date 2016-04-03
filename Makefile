@@ -22,14 +22,14 @@ SRC	= $(wildcard *.cc)
 UNAME	= $(shell uname -s)
 
 
-TARGETS	=	test_poll		\
-		test_iobuffer	\
+TARGETS	=	test_echo_poll test_redis_poll		\
+		test_iobuffer				\
 		test_redisprotocol
 
 
 ifeq ($(UNAME), Linux)
 	# add epoll support...
-	TARGETS	+= test_epoll
+	TARGETS	+= test_echo_epoll test_redis_epoll
 endif
 
 
@@ -41,11 +41,22 @@ clean:
 			$(TARGETS)
 
 
-test_poll: test_poll.o pollselector.o		time.o sockets.o echoworker.o
+
+test_echo_poll: test_echo_poll.o	pollselector.o	echoworker.o	timer.o sockets.o
 	$(LINK) $@ $^			$(LIBS)
 
-test_epoll: test_epoll.o epollselector.o	time.o sockets.o echoworker.o
+test_echo_epoll: test_echo_epoll.o	epollselector.o	echoworker.o	timer.o sockets.o
 	$(LINK) $@ $^			$(LIBS)
+
+
+
+test_redis_poll: test_redis_poll.o	pollselector.o	redisprotocol.o	timer.o sockets.o
+	$(LINK) $@ $^			$(LIBS)
+
+test_redis_epoll: test_redis_epoll.o	epollselector.o	redisprotocol.o	timer.o sockets.o
+	$(LINK) $@ $^			$(LIBS)
+
+
 
 test_iobuffer: test_iobuffer.o
 	$(LINK) $@ $^			$(LIBS)
