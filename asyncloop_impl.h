@@ -47,7 +47,7 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::process(){
 		return true;
 	}
 
-	for(uint32_t i = 0; i < selector_.maxFD(); ++i){
+	for(uint32_t i = 0; i < selector_.getFDStatusCount(); ++i){
 		const auto &t = selector_.getFDStatus(i);
 
 		switch(t.status){

@@ -28,13 +28,15 @@ public:
 
 	WaitStatus wait(int timeout);
 
+	uint32_t getFDStatusCount() const{
+		return maxFD();
+	}
+
 	FDResult getFDStatus(uint32_t no) const;
 
 private:
 	void initializeStatusData_();
 	void closeStatusData_();
-
-
 
 private:
 	std::vector<pollfd>	statusData_;

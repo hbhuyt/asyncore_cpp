@@ -30,6 +30,10 @@ public:
 
 	WaitStatus wait(int timeout);
 
+	uint32_t getFDStatusCount() const{
+		return statusCount_ < 0 ? 0 : (uint32_t) statusCount_;
+	}
+
 	FDResult getFDStatus(uint32_t no) const;
 
 private:
