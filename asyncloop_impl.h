@@ -6,21 +6,27 @@
 
 #include <unistd.h>	// read
 
+#include <algorithm>	// find
+
 namespace net{
 
 template<class SELECTOR, class WORKER, class CLIENTBUFFER>
-AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::AsyncLoop(SELECTOR &&selector, WORKER &&worker, int const serverFD) :
+AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::AsyncLoop(SELECTOR &&selector, WORKER &&worker, const std::initializer_list<int> &serverFD) :
 					selector_(std::move(selector)),
 					worker_(std::move(worker)),
 					serverFD_(serverFD){
-	socket_makeNonBlocking(serverFD_);
-	selector_.insertFD(serverFD_);
+	for(int const fd : serverFD_){
+		socket_makeNonBlocking(fd);
+		selector_.insertFD(fd);
+	}
 }
+
 
 template<class SELECTOR, class WORKER, class CLIENTBUFFER>
 AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::~AsyncLoop(){
 	// serverFD_ will be closed if we close epoll
-	selector_.removeFD(serverFD_);
+	for(int const fd : serverFD_)
+		selector_.removeFD(fd);
 }
 
 // ===========================
@@ -81,8 +87,13 @@ bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::process(){
 // ===========================
 
 template<class SELECTOR, class WORKER, class CLIENTBUFFER>
+bool AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::isServerFD_(int const fd){
+	return std::find(serverFD_.cbegin(), serverFD_.cend(), fd) != serverFD_.cend();
+}
+
+template<class SELECTOR, class WORKER, class CLIENTBUFFER>
 void AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleRead_(int const fd){
-	if (fd == serverFD_){
+	if ( isServerFD_(fd) ){
 		while (handleConnect_(fd));
 		return;
 	}
@@ -119,7 +130,7 @@ void AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleRead_(int const fd){
 
 template<class SELECTOR, class WORKER, class CLIENTBUFFER>
 void AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleWrite_(int const fd){
-	if (fd == serverFD_){
+	if ( isServerFD_(fd) ){
 		// WTF?!?
 		return;
 	}

@@ -18,7 +18,7 @@ private:
 	constexpr static int  WAIT_TIMEOUT_MS	=  WAIT_TIMEOUT * 1000;
 
 public:
-	AsyncLoop(SELECTOR &&selector, WORKER &&worker, int serverFD);
+	AsyncLoop(SELECTOR &&selector, WORKER &&worker, const std::initializer_list<int> &serverFD);
 	~AsyncLoop();
 	AsyncLoop(AsyncLoop &&other) = default;
 	AsyncLoop &operator=(AsyncLoop &&other) = default;
@@ -48,6 +48,8 @@ private:
 
 	void handleSocketOps_(int fd, ssize_t size);
 
+	bool isServerFD_(int fd);
+
 private:
 	bool insertFD_(int fd);
 	void removeFD_(int fd);
@@ -66,7 +68,7 @@ private:
 
 	SELECTOR		selector_;
 	WORKER			worker_;
-	int			serverFD_;
+	std::vector<int>	serverFD_;
 	ClientBufferContainer	clients_;
 	uint32_t		connectedClients_ = 0;
 	bool			keepProcessing_ = true;

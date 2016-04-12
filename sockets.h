@@ -14,7 +14,26 @@ constexpr int SOCKET_DEFAULTOPT	= SOCKET_NONBLOCK & SOCKET_TCPNODELAY;
 
 // ===========================
 
-int socket_create(const char *ip, uint16_t port, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT) noexcept;
+constexpr int SOCKET_ERROR_CREATE	= -1;
+constexpr int SOCKET_ERROR_OPTIONS	= -2;
+constexpr int SOCKET_ERROR_NONBLOCK	= -3;
+constexpr int SOCKET_ERROR_NODELAY	= -4;
+constexpr int SOCKET_ERROR_BIND		= -5;
+constexpr int SOCKET_ERROR_BACKLOG	= -6;
+constexpr int SOCKET_NAME_SIZE		= -7;
+
+// ===========================
+
+struct SOCKET_TCP{};
+struct SOCKET_UNIX{};
+
+extern SOCKET_TCP	socket_tcp;
+extern SOCKET_UNIX	socket_unix;
+
+// ===========================
+
+int socket_create(const SOCKET_TCP,  const char *ip, uint16_t port, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT) noexcept;
+int socket_create(const SOCKET_UNIX, const char *path, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT) noexcept;
 
 bool socket_makeNonBlocking(int fd) noexcept;
 bool socket_makeTCPNoDelay(int fd) noexcept;

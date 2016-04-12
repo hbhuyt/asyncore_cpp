@@ -5,11 +5,17 @@
 #include <netinet/tcp.h>	// TCP_NODELAY
 #include <fcntl.h>		// fcntl
 
+#include <sys/un.h>		// AF_UNIX
+
+#include <string.h>		// strlen
 #include <unistd.h>		// close
 
 #include <errno.h>		// errno
 
 namespace net{
+
+SOCKET_TCP	socket_tcp;
+SOCKET_UNIX	socket_unix;
 
 
 
@@ -41,28 +47,28 @@ int socket_accept(int const fd) noexcept{
 	return -1;
 }
 
-int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, int const options) noexcept{
+int socket_create(const SOCKET_TCP,  const char *ip, uint16_t const port, uint16_t const backlog, int const options) noexcept{
 	int fd = socket(AF_INET , SOCK_STREAM , 0);
 
 	if(fd < 0)
-		return -1;
+		return SOCKET_ERROR_CREATE;
 
 	int const opt = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, & opt, sizeof opt) < 0){
 		::close(fd);
-		return -2;
+		return SOCKET_ERROR_OPTIONS;
 	}
 
 	if (options & SOCKET_NONBLOCK)
 	if (! socket_makeNonBlocking(fd) ){
 		::close(fd);
-		return -3;
+		return SOCKET_ERROR_NONBLOCK;
 	}
 
 	if (options & SOCKET_TCPNODELAY)
 	if (! socket_makeTCPNoDelay(fd) ){
 		::close(fd);
-		return -4;
+		return SOCKET_ERROR_NODELAY;
 	}
 
 	struct sockaddr_in address;
@@ -73,17 +79,53 @@ int socket_create(const char *ip, uint16_t const port, uint16_t const backlog, i
 
 	if (bind(fd, (struct sockaddr *) & address, sizeof address) < 0){
 		::close(fd);
-		return -5;
+		return SOCKET_ERROR_BIND;
 	}
 
 	if (listen(fd, backlog ? backlog : SOMAXCONN) < 0){
 		::close(fd);
-		return -6;
+		return SOCKET_ERROR_BACKLOG;
 	}
 
 	return fd;
 }
 
+int socket_create(const SOCKET_UNIX, const char *path, uint16_t const backlog, int const options) noexcept{
+	struct sockaddr_un address;
+
+	if (sizeof address.sun_path < strlen(path))
+		return SOCKET_NAME_SIZE;
+
+
+	int fd = socket(AF_UNIX , SOCK_STREAM , 0);
+
+	if(fd < 0)
+		return SOCKET_ERROR_CREATE;
+
+	if (options & SOCKET_NONBLOCK)
+	if (! socket_makeNonBlocking(fd) ){
+		::close(fd);
+		return SOCKET_ERROR_NONBLOCK;
+	}
+
+	//struct sockaddr_in address
+	address.sun_family = AF_UNIX;
+	strcpy(address.sun_path, path);
+
+	unlink(address.sun_path);
+
+	if (bind(fd, (struct sockaddr *) & address, sizeof address) < 0){
+		::close(fd);
+		return SOCKET_ERROR_BIND;
+	}
+
+	if (listen(fd, backlog ? backlog : SOMAXCONN) < 0){
+		::close(fd);
+		return SOCKET_ERROR_BACKLOG;
+	}
+
+	return fd;
+}
 
 
 } // namespace
