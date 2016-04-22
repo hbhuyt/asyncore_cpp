@@ -3,10 +3,13 @@ MYCC		= g++
 
 # ======================================================
 
-CF_INCL_EXTRA	:=
+EXTRA_CLEAN	:=
+EXTRA_INCL	:=
+
+# ======================================================
 
 CF_DEPS		= -MMD -MP
-CF_INCL		= -Iinclude $(CF_INCL_EXTRA)
+CF_INCL		= -Iinclude $(EXTRA_INCL)
 CF_OPTIM	=
 CF_WARN		= -Wall -Wconversion -Wpedantic
 
@@ -46,5 +49,6 @@ include $(addsuffix /Makefile.dir, $(SUBDIRS))
 clean:
 	rm -f \
 		$(O)*.o		\
-		$(O)*.d
+		$(O)*.d		\
+		$(EXTRA_CLEAN)
 

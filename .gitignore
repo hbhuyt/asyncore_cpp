@@ -5,17 +5,10 @@ a.out
 
 x.*
 
-_ot/*
+_ot
 
 callgrind.out.*
 
-test_echo_poll
-test_echo_epoll
-
-test_redis_poll
-test_redis_epoll
-
-test_iobuffer
-
-test_redisprotocol
+bin
+obj
 
