@@ -1,71 +1,50 @@
-MYCC	= clang
-MYCC	= g++
+MYCC		= clang
+MYCC		= g++
 
-CXX_OPT	= -g
-CXX_OPT	= -O9
-CXX_OPT	=
+# ======================================================
 
-CXX	= $(MYCC) -std=c++11 -Wall -Wconversion -Wpedantic 	\
-		-MMD -MP		\
-		$(CXX_OPT)		\
-		-c
+CF_INCL_EXTRA	:=
 
-#		-D_FILE_OFFSET_BITS=64	\
+CF_DEPS		= -MMD -MP
+CF_INCL		= -Iinclude $(CF_INCL_EXTRA)
+CF_OPTIM	=
+CF_WARN		= -Wall -Wconversion -Wpedantic
 
-LINK	= $(MYCC) -o
-LIBS	= -lstdc++
+CF_MISC		=
 
-#-ljemalloc
-#-fpack-struct
+CF_ALL		= -std=c++11	\
+			$(CF_DEPS)	\
+			$(CF_INCL)	\
+			$(CF_OPTIM)	\
+			$(CF_WARN)	\
+			$(CF_MISC)
 
-SRC	= $(wildcard *.cc)
-UNAME	= $(shell uname -s)
+CXX		= $(MYCC) $(CF_ALL)
 
+# ======================================================
 
-TARGETS	=	test_echo_poll test_redis_poll		\
-		test_iobuffer				\
-		test_redisprotocol
+LD_ALL		=
+LL_ALL		= -lstdc++
 
+LINK		= $(MYCC) $(LD_ALL) -o $@ $^ $(LL_ALL)
 
-ifeq ($(UNAME), Linux)
-	# add epoll support...
-	TARGETS	+= test_echo_epoll test_redis_epoll
-endif
+SRC		= $(wildcard *.cc)
 
+# ======================================================
 
-all: $(TARGETS)
+A		= bin/
+O		= obj/
 
+# ======================================================
+# ======================================================
+# ======================================================
+
+SUBDIRS = net net/selector net/protocol net/worker net/test
+
+include $(addsuffix /Makefile.dir, $(SUBDIRS))
 
 clean:
-	rm -f *.o *.d *.gch		\
-			$(TARGETS)
-
-
-
-test_echo_poll: test_echo_poll.o	pollselector.o	echoworker.o	timer.o sockets.o
-	$(LINK) $@ $^			$(LIBS)
-
-test_echo_epoll: test_echo_epoll.o	epollselector.o	echoworker.o	timer.o sockets.o
-	$(LINK) $@ $^			$(LIBS)
-
-
-
-test_redis_poll: test_redis_poll.o	pollselector.o	redisprotocol.o	timer.o sockets.o
-	$(LINK) $@ $^			$(LIBS)
-
-test_redis_epoll: test_redis_epoll.o	epollselector.o	redisprotocol.o	timer.o sockets.o
-	$(LINK) $@ $^			$(LIBS)
-
-
-
-test_iobuffer: test_iobuffer.o
-	$(LINK) $@ $^			$(LIBS)
-
-test_redisprotocol: test_redisprotocol.o redisprotocol.o
-	$(LINK) $@ $^			$(LIBS)
-
-%.o: %.cc
-	$(CXX) $<
-
--include $(SRC:%.cc=%.d)
+	rm -f \
+		$(O)*.o		\
+		$(O)*.d
 
