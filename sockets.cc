@@ -2,10 +2,9 @@
 
 #include <sys/socket.h>		// EAGAIN
 #include <arpa/inet.h>		// AF_INET
+#include <sys/un.h>		// AF_UNIX
 #include <netinet/tcp.h>	// TCP_NODELAY
 #include <fcntl.h>		// fcntl
-
-#include <sys/un.h>		// AF_UNIX
 
 #include <string.h>		// strlen
 #include <unistd.h>		// close

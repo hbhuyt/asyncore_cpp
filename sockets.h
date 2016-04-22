@@ -10,7 +10,8 @@ constexpr int SOCKET_TCPNODELAY	= 0x02;
 
 // ===========================
 
-constexpr int SOCKET_DEFAULTOPT	= SOCKET_NONBLOCK & SOCKET_TCPNODELAY;
+constexpr int SOCKET_DEFAULTOPT_TCP	= SOCKET_NONBLOCK & SOCKET_TCPNODELAY;
+constexpr int SOCKET_DEFAULTOPT_UNIX	= SOCKET_NONBLOCK;
 
 // ===========================
 
@@ -32,8 +33,8 @@ extern SOCKET_UNIX	socket_unix;
 
 // ===========================
 
-int socket_create(const SOCKET_TCP,  const char *ip, uint16_t port, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT) noexcept;
-int socket_create(const SOCKET_UNIX, const char *path, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT) noexcept;
+int socket_create(const SOCKET_TCP,  const char *ip, uint16_t port, uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT_TCP) noexcept;
+int socket_create(const SOCKET_UNIX, const char *path,              uint16_t backlog = 0, int options = SOCKET_DEFAULTOPT_UNIX) noexcept;
 
 bool socket_makeNonBlocking(int fd) noexcept;
 bool socket_makeTCPNoDelay(int fd) noexcept;
