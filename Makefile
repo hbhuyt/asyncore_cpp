@@ -31,24 +31,27 @@ LL_ALL		= -lstdc++
 
 LINK		= $(MYCC) $(LD_ALL) -o $@ $^ $(LL_ALL)
 
-SRC		= $(wildcard *.cc)
-
 # ======================================================
 
 A		= bin/
 O		= obj/
 
 # ======================================================
-# ======================================================
-# ======================================================
 
-SUBDIRS = net net/selector net/protocol net/worker net/test
+include Makefile.dirlist
 
 include $(addsuffix /Makefile.dir, $(SUBDIRS))
+
+-include $(wildcard $(O)*.d)
 
 clean:
 	rm -f \
 		$(O)*.o		\
 		$(O)*.d		\
 		$(EXTRA_CLEAN)
+
+paramtest:
+	@echo $(wildcard $(O)*.d)
+
+.PHONY: all clean paramtest
 
