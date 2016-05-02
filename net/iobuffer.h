@@ -3,16 +3,37 @@
 
 #include "stringref.h"
 
+#include <limits>
+
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
 
 namespace net{
 
-template<size_t CAPACITY>
-class IOBuffer{
-public:
+namespace iobuffer{
 	using size_type = uint16_t;
+}
+
+// ==================================
+
+template<
+	size_t CAPACITY,
+	bool VALID = CAPACITY < std::numeric_limits<iobuffer::size_type>::max()
+>
+class IOBuffer{
+	static_assert(
+		VALID,
+		"IOBuffer invalid capacity; max capacity = std::numeric_limits<size_type>::max()"
+	);
+};
+
+// ==================================
+
+template<size_t CAPACITY>
+class IOBuffer<CAPACITY, true>{
+public:
+	using size_type = iobuffer::size_type;
 
 private:
 	size_type	head_	= 0;
@@ -34,6 +55,10 @@ public:
 
 	const char *data() const{
 		return & buffer_[head_];
+	}
+
+	const char *dataTail() const{
+		return & buffer_[tail_];
 	}
 
 	char *dataTail(){

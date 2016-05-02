@@ -121,7 +121,7 @@ void AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleRead_(int const fd){
 	if (size <= 0)
 		return handleSocketOps_(fd, size);
 
-	buffer.push(size);
+	buffer.push((size_t) size);
 
 	buffer.restartTimer();
 
@@ -160,7 +160,7 @@ void AsyncLoop<SELECTOR, WORKER, CLIENTBUFFER>::handleWrite_(int const fd){
 	if (size <= 0)
 		return handleSocketOps_(fd, size);
 
-	buffer.pop(size);
+	buffer.pop((size_t) size);
 
 	buffer.restartTimer();
 

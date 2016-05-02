@@ -45,7 +45,7 @@ auto RedisProtocol::operator()(const StringRef &src) -> Status{
 		// at least one character for parameter count
 		return Status::BUFFER_NOT_READ;
 
-	size_t const paramsCount = readInt_(src, pos);
+	size_t const paramsCount = (size_t) readInt_(src, pos);
 
 	params_.clear();
 
