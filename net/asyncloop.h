@@ -1,7 +1,7 @@
 #ifndef _NET_ASYNC_LOOP_H
 #define _NET_ASYNC_LOOP_H
 
-#include "selectordefs.h"
+#include "selector/selectordefs.h"
 #include "clientbuffer.h"
 
 #include <map>

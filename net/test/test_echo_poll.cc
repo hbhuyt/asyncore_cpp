@@ -1,5 +1,5 @@
-#include "pollselector.h"
-#include "echoworker.h"
+#include "selector/pollselector.h"
+#include "worker/echoworker.h"
 
 using MySelector	= net::selector::PollSelector;
 using MyWorker		= net::worker::EchoWorker;

@@ -1,4 +1,4 @@
-#include "redisprotocol.h"
+#include "protocol/redisprotocol.h"
 
 #include <iostream>
 

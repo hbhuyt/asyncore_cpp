@@ -2,7 +2,7 @@
 
 #include "stringref.h"
 
-#include "workerdefs.h"
+#include "worker/workerdefs.h"
 
 #include <unistd.h>	// read
 

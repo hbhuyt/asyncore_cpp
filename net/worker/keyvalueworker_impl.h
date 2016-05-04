@@ -1,7 +1,7 @@
 
 #include <cstring>
 
-#include "protocoldefs.h"
+#include "protocol/protocoldefs.h"
 
 #include "stringref.h"
 
